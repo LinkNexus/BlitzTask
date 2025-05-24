@@ -6,7 +6,7 @@ services:
     build: 
       context: ./server
     environment:
-      SERVER_NAME: ${SERVER_NAME:-server.blitz-task.orb.local}, server:80
+      SERVER_NAME: ${SERVER_NAME:-http://server.blitz-task.docker.localhost}, server:80
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       # Run "composer require symfony/orm-pack" to install and configure Doctrine ORM
@@ -21,25 +21,41 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-    ports:
-      # HTTP
-      - target: 80
-        published: ${HTTP_PORT:-80}
-        protocol: tcp
-      # HTTPS
-      - target: 443
-        published: ${HTTPS_PORT:-443}
-        protocol: tcp
-      # HTTP/3
-      - target: 443
-        published: ${HTTP3_PORT:-443}
-        protocol: udp
+    # ports:
+    #   # HTTP
+    #   - target: 80
+    #     published: ${HTTP_PORT:-80}
+    #     protocol: tcp
+    #   # HTTPS
+    #   - target: 443
+    #     published: ${HTTPS_PORT:-443}
+    #     protocol: tcp
+    #   # HTTP/3
+    #   - target: 443
+    #     published: ${HTTP3_PORT:-443}
+    #     protocol: udp
+    networks:
+      - web-dev
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.blitz-task-server.tls=true"
+      - "traefik.http.routers.blitz-task-server-http.entrypoints=web"
+      - "traefik.http.routers.blitz-task-server.entrypoints=websecure"
 
   client:
     build:
       context: ./client
     environment:
       - SERVER_URL=http://server
+    networks:
+      - web-dev
+    depends_on:
+      - server
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.blitz-task-client.tls=true"
+      - "traefik.http.routers.blitz-task-client-http.entrypoints=web"
+      - "traefik.http.routers.blitz-task-client.entrypoints=websecure"
 
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
@@ -64,4 +80,8 @@ volumes:
   ###> doctrine/doctrine-bundle ###
   database_data:
 ###< doctrine/doctrine-bundle ###
+
+networks:
+  web-dev:
+    external: true
       

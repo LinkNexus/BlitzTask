@@ -6,18 +6,18 @@ ENV PORT=3000
 EXPOSE 3000
 RUN rm -rf node_modules .next pnpm-lock.yaml
 
-FROM node_base as node_dev
+FROM node_base AS node_dev
 RUN pnpm install
 COPY . .
 ENV NODE_ENV=development
 CMD ["pnpm", "run", "dev"]
 
-FROM node_base as node_build
+FROM node_base AS node_build
 RUN pnpm install --omit-dev
 COPY . .
 CMD ["pnpm", "run", "build"]
 
-FROM node_base as node_prod
+FROM node_base AS node_prod
 ENV NODE_ENV=production
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001

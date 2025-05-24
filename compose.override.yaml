@@ -16,23 +16,27 @@ services:
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
       APP_ENV: "${APP_ENV:-dev}"
-      CLIENT_URL: https://blitz-task.orb.local
-      SENDER_EMAIL: noreply@blitz-task.orb.local
+      CLIENT_URL: https://blitz-task.docker.localhost
+      SENDER_EMAIL: noreply@blitz-task.docker.localhost
       MAILER_DSN: smtp://mailer:1025
     extra_hosts:
       # Ensure that host.docker.internal is correctly defined on Linux
       - host.docker.internal:host-gateway
     tty: true
+    labels:
+      - "traefik.http.routers.blitz-task-server-http.rule=Host(`server.blitz-task.docker.localhost`)"
+      # - "traefik.http.routers.blitz-task-server.rule=Host(`server.blitz-task.docker.localhost`)"
 
   client:
     build: 
       target: node_dev
     labels:
-      - dev.orbstack.domains=blitz-task.orb.local
+      - "traefik.http.routers.blitz-task-client-http.rule=Host(`blitz-task.docker.localhost`)"
+      - "traefik.http.routers.blitz-task-client.rule=Host(`blitz-task.docker.localhost`)"
     # volumes:
     #   - ./client:/app
     environment:
-      - NEXT_PUBLIC_SERVER_URL=https://server.blitz-task.orb.local
+      - NEXT_PUBLIC_SERVER_URL=http://server.blitz-task.docker.localhost
     extra_hosts:
       - host.docker.internal:host-gateway
     develop:
@@ -49,6 +53,13 @@ services:
   database:
     ports:
       - "5432"
+    networks:
+      - web-dev
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.blitz-task-database.entrypoints=web"
+      - "traefik.http.routers.blitz-task-database.rule=Host(`db.blitz-task.docker.localhost`)"
+      - "traefik.http.services.blitz-task-database.loadbalancer.server.port=5432"
 ###< doctrine/doctrine-bundle ###
 
 ###> symfony/mailer ###
@@ -60,4 +71,11 @@ services:
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - web-dev
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.blitz-task-mailer.entrypoints=web"
+      - "traefik.http.routers.blitz-task-mailer.rule=Host(`mail.blitz-task.docker.localhost`)"
+      - "traefik.http.services.blitz-task-mailer.loadbalancer.server.port=8025"
 ###< symfony/mailer ###

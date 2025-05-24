@@ -1,27 +1,26 @@
 'use client';
 
-import { ApiError, apiFetch } from "@/lib/fetch";
-import { on } from "events";
-import { ComponentProps, useCallback, useEffect, useState } from "react";
+import {ApiError, apiFetch} from "@/lib/fetch";
+import {ComponentProps, useCallback, useEffect, useState} from "react";
 
 interface AjaxFormProps<T> extends ComponentProps<"form"> {
     action: string,
-    onRequestError?: (error: ApiError<any>) => void,
+    onRequestError?: (error: ApiError) => void,
     onResponse?: (response: T) => void,
     duringLoading?: (loading: boolean) => void,
     additionalData?: Record<string, any>,
 }
 
-export function AjaxForm<T,>({
-    action,
-    children,
-    onRequestError,
-    onResponse,
-    duringLoading,
-    method = 'POST',
-    additionalData = {},
-    ...props
-}: AjaxFormProps<T>) {
+export function AjaxForm<T, >({
+                                  action,
+                                  children,
+                                  onRequestError,
+                                  onResponse,
+                                  duringLoading,
+                                  method = 'POST',
+                                  additionalData = {},
+                                  ...props
+                              }: AjaxFormProps<T>) {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -33,7 +32,7 @@ export function AjaxForm<T,>({
         try {
             const resData = await apiFetch<T>(action, {
                 method: method,
-                data: { ...Object.fromEntries(formData.entries()), ...additionalData },
+                data: {...Object.fromEntries(formData.entries()), ...additionalData},
                 context: "client",
             });
 

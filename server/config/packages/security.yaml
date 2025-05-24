@@ -16,6 +16,12 @@ security:
         main:
             lazy: true
             provider: app_user_provider
+            
+            login_link:
+                check_route: auth.login_check
+                signature_properties: [ 'id', "email" ]
+                lifetime: 300
+                max_uses: 1
 
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#the-firewall

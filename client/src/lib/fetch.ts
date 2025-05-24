@@ -1,8 +1,8 @@
 export async function apiFetch<T>(url: string | URL, options: Omit<RequestInit, "body"> & {
     data: Record<string, any> | null;
     context?: "client" | "server";
-} = { data: null }) {
-    const { context = "client", data, ...rest } = options;
+} = {data: null}) {
+    const {context = "client", data, ...rest} = options;
     const endpoint = context === "client" ? process.env.NEXT_PUBLIC_SERVER_URL : process.env.SERVER_URL;
     const headers = {
         "Content-Type": "application/json",
@@ -30,8 +30,8 @@ export async function apiFetch<T>(url: string | URL, options: Omit<RequestInit, 
     return await res.json() as T;
 }
 
-export class ApiError<T> extends Error {
-    constructor(public data: T, public statusCode: number) {
+export class ApiError extends Error {
+    constructor(public data: any, public statusCode: number) {
         super();
         this.name = "ApiError";
     }
