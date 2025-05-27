@@ -3,28 +3,34 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Security\EmailVerifier;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Notifier\NotifierInterface;
 use Symfony\Component\Notifier\Recipient\Recipient;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\LoginLink\LoginLinkHandlerInterface;
 use Symfony\Component\Security\Http\LoginLink\LoginLinkNotification;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 
 #[Route(path: "/auth", name: "auth.")]
 final class SecurityController extends AbstractController
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {}
+    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly EmailVerifier $emailVerifier)
+    {
+    }
 
     #[Route(path: "/register", name: "register", methods: ["POST"])]
-    public function register(Request $request, ValidatorInterface $validator, Security $security)
+    public function register(Request $request, ValidatorInterface $validator, Security $security): Response
     {
         $data = json_decode($request->getContent(), true);
         $user = new User();
@@ -48,24 +54,14 @@ final class SecurityController extends AbstractController
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
-        return $this->json(
-            $user,
-            Response::HTTP_CREATED,
-            [],
-            ['groups' => ['user:read']]
+        $this->emailVerifier->sendEmailConfirmation("auth.verify_email", $user, (new TemplatedEmail)
+            ->to(new Address($user->getEmail(), $user->getName()))
+            ->subject("Registration Confirmation to BlitzTask!")
+            ->htmlTemplate("auth/registration_email.html.twig")
         );
-    }
 
-    #[Route('/login_check', name: 'login_check')]
-    public function check(#[Autowire("%env(CLIENT_URL)%")] string $clientUrl, Request $request) {
-        $separator = parse_url($clientUrl, PHP_URL_QUERY) ? '&' : '?';
-        return $this->redirect($clientUrl ."/auth/login_check". $separator .
-            http_build_query([
-                "expires" => $request->query->get("expires"),
-                "user" => $request->query->get("user"),
-                "hash" => $request->query->get("hash"),
-            ])
-        );
+        $this->addFlash("success", "Registration successful! Please check your email to confirm your account.");
+        return $security->login($user);
     }
 
     #[Route(path: "/login", name: "login", methods: ["POST"])]
@@ -87,4 +83,52 @@ final class SecurityController extends AbstractController
         // The user must not directly know if the email exists in the system
         return $this->json(['status' => 'success'], Response::HTTP_OK);
     }
+
+    #[Route('/login_check', name: 'login_check')]
+    public function check(#[Autowire("%env(CLIENT_URL)%")] string $clientUrl, Request $request): RedirectResponse
+    {
+        $separator = parse_url($clientUrl, PHP_URL_QUERY) ? '&' : '?';
+        return $this->redirect($clientUrl . "/auth/login_check" . $separator .
+            http_build_query([
+                "expires" => $request->query->get("expires"),
+                "user" => $request->query->get("user"),
+                "hash" => $request->query->get("hash"),
+            ])
+        );
+    }
+
+    #[Route(path: "/me", name: "me", methods: ["GET"])]
+    public function me(): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        return $this->json(
+            $user,
+            Response::HTTP_OK,
+            [],
+            ['groups' => ['user:read']]
+        );
+    }
+
+    #[Route('/verify/email', name: 'verify_email')]
+    public function verifyUserEmail(Request $request, #[Autowire('%env(CLIENT_URL)%')] string $domain): RedirectResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        try {
+            /** @var User $user */
+            $user = $this->getUser();
+            $this->emailVerifier->handleEmailConfirmation($request, $user);
+        } catch (VerifyEmailExceptionInterface $exception) {
+            $this->addFlash('error', $exception->getMessage());
+            return $this->redirect("$domain/auth/register");
+        }
+
+        $this->addFlash('success', 'Your email has been successfully verified.');
+        return $this->redirect("$domain/auth/login");
+    }
+
 }

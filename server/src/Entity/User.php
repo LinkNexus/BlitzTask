@@ -14,39 +14,36 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    #[ORM\Column(nullable: true)]
+    #[Groups(['user:read'])]
+    public ?bool $isVerified = false;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     #[Groups(["user:read"])]
     private ?int $id = null;
-
     #[ORM\Column(length: 180)]
     #[Assert\Email]
     #[Groups(["user:read"])]
     private ?string $email = null;
-
     /**
      * @var list<string> The user roles
      */
     #[ORM\Column]
     #[Groups(["user:read"])]
     private array $roles = [];
-
     /**
      * @var string The hashed password
      */
     #[ORM\Column(nullable: true)]
     private ?string $password = null;
-
     #[ORM\Column(length: 255)]
     #[Assert\Length(min: 2, max: 255, minMessage: "The name must be at least {{ limit }} characters long", maxMessage: "The name cannot be longer than {{ limit }} characters")]
     #[Assert\Regex(pattern: '/^[\w -]+$/', message: "The name can only contain letters, numbers, dashes and underscores.")]
     #[Groups(["user:read"])]
     private ?string $name = null;
-
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $googleId = null;
-
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $githubId = null;
 
@@ -74,7 +71,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getUserIdentifier(): string
     {
-        return (string) $this->email;
+        return (string)$this->email;
     }
 
     /**
@@ -156,6 +153,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->githubId = $githubId;
 
+        return $this;
+    }
+
+    public function isVerified(): ?bool
+    {
+        return $this->isVerified;
+    }
+
+    public function setIsVerified(?bool $isVerified): User
+    {
+        $this->isVerified = $isVerified;
         return $this;
     }
 }

@@ -1,19 +1,39 @@
 export async function apiFetch<T>(url: string | URL, options: Omit<RequestInit, "body"> & {
-    data: Record<string, any> | null;
+    data?: Record<string, any> | null;
     context?: "client" | "server";
-} = {data: null}) {
+    format?: "json" | "form-data";
+} = {data: null, format: "json"}) {
     const {context = "client", data, ...rest} = options;
     const endpoint = context === "client" ? process.env.NEXT_PUBLIC_SERVER_URL : process.env.SERVER_URL;
-    const headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        ...rest.headers,
-    };
+    let requestData: string | FormData | null = null;
+    let headers: Record<string, string> = {};
 
-    console.log(endpoint + url.toString());
+    if (options.format === "json") {
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            ...rest.headers,
+        };
+
+        if (data) {
+            requestData = JSON.stringify(data);
+        }
+    } else if (options.format === "form-data") {
+        headers = {
+            "Accept": "application/json",
+            ...rest.headers,
+        };
+        if (data) {
+            const formData = new FormData();
+            for (const [key, value] of Object.entries(data)) {
+                formData.append(key, value);
+            }
+            requestData = formData;
+        }
+    }
 
     const res = await fetch(endpoint + url.toString(), {
-        body: data ? JSON.stringify(data) : null,
+        body: requestData,
         headers: {
             ...headers,
             ...options.headers

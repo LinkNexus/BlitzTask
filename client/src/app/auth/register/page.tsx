@@ -6,6 +6,8 @@ import {useState} from "react";
 import {AjaxForm} from "@/components/custom/forms/ajax-form";
 import {AjaxInput} from "@/components/custom/forms/ajax-input";
 import Link from "next/link";
+import {toast} from "sonner";
+import {displayFlashMessages} from "@/lib/flash-messages";
 
 export default function RegistrationPage() {
     const [loading, setLoading] = useState<boolean>(false);
@@ -22,7 +24,7 @@ export default function RegistrationPage() {
             <AjaxForm
                 action="/auth/register"
                 duringLoading={setLoading}
-                onResponse={console.log}
+                onResponse={displayFlashMessages}
                 onRequestError={(e) => setErrors(e.data)}
                 className="flex flex-col gap-4"
             >

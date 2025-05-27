@@ -22,7 +22,6 @@ export default function LoginPage() {
             <AjaxForm
                 action="/auth/login"
                 duringLoading={setLoading}
-                onResponse={console.log}
                 className="flex flex-col gap-4"
             >
                 <div className="flex flex-col gap-2">

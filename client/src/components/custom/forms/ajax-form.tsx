@@ -9,6 +9,7 @@ interface AjaxFormProps<T> extends ComponentProps<"form"> {
     onResponse?: (response: T) => void,
     duringLoading?: (loading: boolean) => void,
     additionalData?: Record<string, any>,
+    format?: "form-data" | "json",
 }
 
 export function AjaxForm<T, >({
@@ -19,6 +20,7 @@ export function AjaxForm<T, >({
                                   duringLoading,
                                   method = 'POST',
                                   additionalData = {},
+                                  format = 'json',
                                   ...props
                               }: AjaxFormProps<T>) {
     const [loading, setLoading] = useState(false);
@@ -34,6 +36,7 @@ export function AjaxForm<T, >({
                 method: method,
                 data: {...Object.fromEntries(formData.entries()), ...additionalData},
                 context: "client",
+                format
             });
 
             onResponse?.(resData);
