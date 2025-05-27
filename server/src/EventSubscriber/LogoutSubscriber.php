@@ -1,0 +1,27 @@
+<?php
+
+namespace App\EventSubscriber;
+
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Security\Http\Event\LogoutEvent;
+
+final readonly class LogoutSubscriber implements EventSubscriberInterface
+{
+    public function __construct(#[Autowire("%env(CLIENT_URL)%")] private string $clientUrl)
+    {
+    }
+
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            LogoutEvent::class => 'onLogout',
+        ];
+    }
+
+    public function onLogout(LogoutEvent $event): void
+    {
+        $event->setResponse(new JsonResponse(["success" => true]));
+    }
+}
