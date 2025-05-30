@@ -27,6 +27,9 @@ security:
                 signature_properties: [ 'id', 'email' ]
                 success_handler: App\Security\Authentication\LoginLink\AuthenticationSuccessHandler
                 failure_handler: App\Security\Authentication\LoginLink\AuthenticationFailureHandler
+            
+            custom_authenticators:
+                - App\Security\Authentication\OAuth\OAuthAuthenticator
 
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#the-firewall

@@ -1,17 +1,18 @@
 'use client';
 
 import {AuthHeader} from "@/components/custom/auth/header";
-import {Button} from "@/components/ui/button";
 import {AjaxForm} from "@/components/custom/forms/ajax-form";
-import {use} from "react";
+import {use, useState} from "react";
 import {User} from "@/types";
 import {useAuth} from "@/lib/auth";
+import {LoaderButton} from "@/components/custom/loader-button";
 
 export default function LoginCheckPage({searchParams}: {
     searchParams: Promise<{ user: string, expires: string, hash: string }>
 }) {
     const {user, expires, hash} = use(searchParams);
     const {setUser} = useAuth();
+    const [pending, setPending] = useState(false);
 
     return (
         <>
@@ -34,7 +35,7 @@ export default function LoginCheckPage({searchParams}: {
                 <input type="hidden" name="expires" value={expires}/>
                 <input type="hidden" name="user" value={user}/>
                 <input type="hidden" name="hash" value={hash}/>
-                <Button className="w-full" type="submit">Continue</Button>
+                <LoaderButton loading={pending} className="w-full" type="submit">Continue</LoaderButton>
             </AjaxForm>
         </>
     )

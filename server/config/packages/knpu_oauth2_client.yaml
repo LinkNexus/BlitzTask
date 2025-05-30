@@ -5,6 +5,6 @@ knpu_oauth2_client:
             type: github
             client_id: "%env(GITHUB_CLIENT)%"
             client_secret: "%env(GITHUB_SECRET)%"
-            redirect_route: auth_check
+            redirect_route: auth.oauth_check
             redirect_params:
                 service: github

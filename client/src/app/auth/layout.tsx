@@ -6,10 +6,13 @@ import {PropsWithChildren, useEffect} from "react";
 import {useAuth} from "@/lib/auth";
 import {LoadingScreen} from "@/components/custom/loading-screen";
 import {useRouter} from "next/navigation";
+import {useFlashMessages} from "@/lib/flash-messages";
 
 export default function AuthLayout({children}: PropsWithChildren) {
     const {status, authenticate, lastRequestedUrl} = useAuth();
     const router = useRouter();
+
+    useFlashMessages();
 
     useEffect(() => {
         authenticate();

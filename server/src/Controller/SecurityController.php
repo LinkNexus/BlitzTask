@@ -6,6 +6,7 @@ use App\DTO\CreateUserDTO;
 use App\Entity\User;
 use App\Security\EmailVerifier;
 use Doctrine\ORM\EntityManagerInterface;
+use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -121,6 +122,22 @@ final class SecurityController extends AbstractController
 
         $this->addFlash('success', 'Your email has been successfully verified.');
         return $this->redirect($domain);
+    }
+
+    #[Route("/connect/{service}")]
+    public function connect(
+        ClientRegistry                          $clientRegistry,
+        string                                  $service,
+        #[Autowire('%env(CLIENT_URL)%')] string $clientUrl
+    ): RedirectResponse
+    {
+        if ($service === "github") {
+            $scopes = ["user:email", "read:user"];
+            $client = $clientRegistry->getClient($service);
+            return $client->redirect($scopes);
+        }
+
+        return $this->redirect("$clientUrl/auth/login");
     }
 
 }
