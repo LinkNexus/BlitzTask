@@ -1,12 +1,12 @@
 'use client';
 
 import {AuthHeader} from "@/components/custom/auth/header";
-import {AjaxForm} from "@/components/custom/forms/ajax-form";
-import {LoaderButton} from "@/components/custom/loader-button";
-import {useState} from "react";
 import Link from "next/link";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
+import {LoaderButton} from "@/components/custom/loader-button";
+import {AjaxForm} from "@/components/custom/forms/ajax-form";
+import {useState} from "react";
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
@@ -20,8 +20,9 @@ export default function LoginPage() {
             </AuthHeader>
 
             <AjaxForm
-                action="/auth/login"
+                onResponse={console.log}
                 duringLoading={setLoading}
+                action="/auth/login"
                 className="flex flex-col gap-4"
             >
                 <div className="flex flex-col gap-2">
@@ -41,5 +42,5 @@ export default function LoginPage() {
                 href="/auth/register">create an account here</Link>
             </p>
         </>
-    )
+    );
 }

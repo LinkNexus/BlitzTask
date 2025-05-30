@@ -1,53 +1,59 @@
-export async function apiFetch<T>(url: string | URL, options: Omit<RequestInit, "body"> & {
-    data?: Record<string, any> | null;
-    context?: "client" | "server";
-    format?: "json" | "form-data";
-} = {data: null, format: "json"}) {
-    const {context = "client", data, ...rest} = options;
-    const endpoint = context === "client" ? process.env.NEXT_PUBLIC_SERVER_URL : process.env.SERVER_URL;
-    let requestData: string | FormData | null = null;
-    let headers: Record<string, string> = {};
+import {useAppStore} from "@/store/store-provider";
 
-    if (options.format === "json") {
+interface ApiFetchOptions extends Omit<RequestInit, "body"> {
+    data?: Record<string, any> | null;
+    contentType?: "json" | "form-data";
+    accept?: "json" | "text";
+}
+
+export async function apiFetch<T>(url: string | URL, options: ApiFetchOptions = {
+    data: null,
+    contentType: "json",
+    accept: "json"
+}) {
+    const {data = null, contentType = "json", accept = "json"} = options;
+    let headers: Record<string, string> = {};
+    let requestBody: string | FormData | null = null;
+
+    if (contentType === "form-data") {
+        if (!(data instanceof FormData)) {
+            // @ts-ignore
+            requestBody = new FormData();
+            Object.entries(data).forEach(([key, value]) => {
+                if (value !== null && value !== undefined) {
+                    requestBody.append(key, value);
+                }
+            })
+        } else requestBody = data;
+    } else {
         headers = {
             "Content-Type": "application/json",
-            "Accept": "application/json",
-            ...rest.headers,
-        };
-
-        if (data) {
-            requestData = JSON.stringify(data);
         }
-    } else if (options.format === "form-data") {
-        headers = {
-            "Accept": "application/json",
-            ...rest.headers,
-        };
-        if (data) {
-            const formData = new FormData();
-            for (const [key, value] of Object.entries(data)) {
-                formData.append(key, value);
-            }
-            requestData = formData;
-        }
+        if (data) requestBody = JSON.stringify(data);
     }
 
-    const res = await fetch(endpoint + url.toString(), {
-        body: requestData,
+    if (accept === "json") headers["Accept"] = "application/json";
+
+    const response = await fetch(process.env.NEXT_PUBLIC_SERVER_URL + url.toString(), {
+        ...options,
+        body: requestBody,
         headers: {
             ...headers,
             ...options.headers
         },
-        method: options.method || "POST",
-        credentials: "include",
-        ...rest
+        method: options.method ?? "GET",
+        credentials: "include"
     });
 
-    if (!res.ok) {
-        throw new ApiError(await res.json(), res.status);
+    if (!response.ok) {
+        if (response.status === 401) {
+            useAppStore(state => state.setUser)(null);
+        }
+
+        throw new ApiError(await response.json(), response.status);
     }
 
-    return await res.json() as T;
+    return accept === "json" ? (await response.json() as T) : (await response.text() as T);
 }
 
 export class ApiError extends Error {

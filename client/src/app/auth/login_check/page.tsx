@@ -1,11 +1,17 @@
+'use client';
+
 import {AuthHeader} from "@/components/custom/auth/header";
 import {Button} from "@/components/ui/button";
+import {AjaxForm} from "@/components/custom/forms/ajax-form";
+import {use} from "react";
+import {User} from "@/types";
+import {useAuth} from "@/lib/auth";
 
-export default async function LoginCheckPage({searchParams}: {
+export default function LoginCheckPage({searchParams}: {
     searchParams: Promise<{ user: string, expires: string, hash: string }>
 }) {
-    const {user, expires, hash} = await searchParams;
-    const {NEXT_PUBLIC_SERVER_URL} = process.env;
+    const {user, expires, hash} = use(searchParams);
+    const {setUser} = useAuth();
 
     return (
         <>
@@ -15,13 +21,21 @@ export default async function LoginCheckPage({searchParams}: {
                 </span>
             </AuthHeader>
 
-            <form method="POST" action={NEXT_PUBLIC_SERVER_URL + "/auth/login_check"} className="w-full">
+            <AjaxForm<User>
+                action="/auth/login-check"
+                className="w-full"
+                contentType="form-data"
+                onResponse={(res) => setUser(res)}
+                onRequestError={(err) => {
+                    console.log(err);
+                    setUser(null);
+                }}
+            >
                 <input type="hidden" name="expires" value={expires}/>
                 <input type="hidden" name="user" value={user}/>
                 <input type="hidden" name="hash" value={hash}/>
-
                 <Button className="w-full" type="submit">Continue</Button>
-            </form>
+            </AjaxForm>
         </>
     )
 }

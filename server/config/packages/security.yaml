@@ -13,20 +13,20 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
+        
         main:
             lazy: true
             provider: app_user_provider
             
-            login_link:
-                check_route: auth.login_check
-                signature_properties: [ 'id', "email" ]
-                lifetime: 3600 # 1 hour
-                max_uses: 2
-                check_post_only: true
-                success_handler: App\Security\Authentication\LoginLink\AuthenticationSuccessHandler
-                
             logout:
                 path: /auth/logout
+            
+            login_link:
+                check_route: auth.login_check
+                check_post_only: true
+                signature_properties: [ 'id', 'email' ]
+                success_handler: App\Security\Authentication\LoginLink\AuthenticationSuccessHandler
+                failure_handler: App\Security\Authentication\LoginLink\AuthenticationFailureHandler
 
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#the-firewall

@@ -32,16 +32,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     #[Groups(["user:read"])]
     private array $roles = [];
+
     /**
      * @var string The hashed password
      */
     #[ORM\Column(nullable: true)]
     private ?string $password = null;
+
     #[ORM\Column(length: 255)]
     #[Assert\Length(min: 2, max: 255, minMessage: "The name must be at least {{ limit }} characters long", maxMessage: "The name cannot be longer than {{ limit }} characters")]
     #[Assert\Regex(pattern: '/^[\w -]+$/', message: "The name can only contain letters, numbers, dashes and underscores.")]
     #[Groups(["user:read"])]
     private ?string $name = null;
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $googleId = null;
     #[ORM\Column(length: 255, nullable: true)]

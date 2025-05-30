@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\DTO\CreateUserDTO;
 use App\Entity\User;
 use App\Security\EmailVerifier;
 use Doctrine\ORM\EntityManagerInterface;
@@ -13,13 +14,13 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Notifier\NotifierInterface;
 use Symfony\Component\Notifier\Recipient\Recipient;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\LoginLink\LoginLinkHandlerInterface;
 use Symfony\Component\Security\Http\LoginLink\LoginLinkNotification;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 
 #[Route(path: "/auth", name: "auth.")]
@@ -30,29 +31,29 @@ final class SecurityController extends AbstractController
     }
 
     #[Route(path: "/register", name: "register", methods: ["POST"])]
-    public function register(Request $request, ValidatorInterface $validator, Security $security): Response
+    public function register(
+        #[MapRequestPayload] CreateUserDTO $userDTO,
+        Security                           $security,
+    ): Response
     {
-        $data = json_decode($request->getContent(), true);
-        $user = new User();
-        $user->setEmail($data['email']);
-        $user->setName($data['name']);
-
-        $errors = $validator->validate($user);
-
-        if (count($errors) > 0) {
-            $errorsArray = [];
-            foreach ($errors as $error) {
-                $errorsArray[$error->getPropertyPath()] = $error->getMessage();
-            }
-            return $this->json($errorsArray, Response::HTTP_BAD_REQUEST);
+        if ($this->entityManager->getRepository(User::class)->findOneBy(['email' => $userDTO->email])) {
+            return $this->json([
+                "violations" => [
+                    [
+                        "propertyPath" => "email",
+                        "title" => "The email {$userDTO->email} is already in use by another account."
+                    ]
+                ]
+            ], Response::HTTP_BAD_REQUEST);
         }
 
-        if ($this->entityManager->getRepository(User::class)->findOneBy(['email' => $user->getEmail()])) {
-            return $this->json(['email' => "There is already an account with this email"], Response::HTTP_BAD_REQUEST);
-        }
-
-        $this->entityManager->persist($user);
+        $this->entityManager->persist((new User())
+            ->setEmail($userDTO->email)
+            ->setName($userDTO->name)
+        );
         $this->entityManager->flush();
+
+        $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $userDTO->email]);
 
         $this->emailVerifier->sendEmailConfirmation("auth.verify_email", $user, (new TemplatedEmail)
             ->to(new Address($user->getEmail(), $user->getName()))
@@ -60,12 +61,16 @@ final class SecurityController extends AbstractController
             ->htmlTemplate("auth/registration_email.html.twig")
         );
 
-        $this->addFlash("success", "Registration successful! Please check your email to confirm your account.");
+        $this->addFlash("success", "Please check your email to verify your account.");
         return $security->login($user);
     }
 
-    #[Route(path: "/login", name: "login", methods: ["POST"])]
-    public function login(Request $request, LoginLinkHandlerInterface $loginLinkHandler, NotifierInterface $notifier): JsonResponse
+    #[Route(path: "/login", name: "login")]
+    public function login(
+        Request                   $request,
+        LoginLinkHandlerInterface $loginLinkHandler,
+        NotifierInterface         $notifier
+    ): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $data['email']]);
@@ -80,12 +85,15 @@ final class SecurityController extends AbstractController
             $notifier->send($notification, $recipient);
         }
 
-        // The user must not directly know if the email exists in the system
+        $this->addFlash("success", "A login link has been sent to your email address.");
         return $this->json(['status' => 'success'], Response::HTTP_OK);
     }
 
-    #[Route('/login_check', name: 'login_check')]
-    public function check(#[Autowire("%env(CLIENT_URL)%")] string $clientUrl, Request $request): RedirectResponse
+    #[Route('/login-check', name: 'login_check')]
+    public function check(
+        #[Autowire("%env(CLIENT_URL)%")] string $clientUrl,
+        Request                                 $request
+    ): RedirectResponse
     {
         $separator = parse_url($clientUrl, PHP_URL_QUERY) ? '&' : '?';
         return $this->redirect($clientUrl . "/auth/login_check" . $separator .
@@ -94,22 +102,6 @@ final class SecurityController extends AbstractController
                 "user" => $request->query->get("user"),
                 "hash" => $request->query->get("hash"),
             ])
-        );
-    }
-
-    #[Route(path: "/me", name: "me", methods: ["GET"])]
-    public function me(): JsonResponse
-    {
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        return $this->json(
-            $user,
-            Response::HTTP_OK,
-            [],
-            ['groups' => ['user:read']]
         );
     }
 
@@ -128,7 +120,7 @@ final class SecurityController extends AbstractController
         }
 
         $this->addFlash('success', 'Your email has been successfully verified.');
-        return $this->redirect("$domain/auth/login");
+        return $this->redirect($domain);
     }
 
 }

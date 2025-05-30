@@ -1,16 +1,15 @@
 'use client';
 
 import {useAuth} from "@/lib/auth";
-import {useFlashMessages} from "@/lib/flash-messages";
+import {Button} from "@/components/ui/button";
 
-export default function Home() {
-    const {user} = useAuth();
-
-    useFlashMessages();
+export default function HomePage() {
+    const {user, logout} = useAuth();
 
     return (
-        <div>
-            {user!.name}
-        </div>
-    )
+        <>
+            <div>{user?.name}</div>
+            <Button onClick={logout}>Logout</Button>
+        </>
+    );
 }

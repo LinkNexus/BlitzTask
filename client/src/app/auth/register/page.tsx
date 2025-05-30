@@ -1,17 +1,18 @@
-'use client';
+"use client";
 
 import {AuthHeader} from "@/components/custom/auth/header";
-import {LoaderButton} from "@/components/custom/loader-button";
-import {useState} from "react";
-import {AjaxForm} from "@/components/custom/forms/ajax-form";
-import {AjaxInput} from "@/components/custom/forms/ajax-input";
 import Link from "next/link";
-import {toast} from "sonner";
-import {displayFlashMessages} from "@/lib/flash-messages";
+import {FormField} from "@/components/custom/forms/form-field";
+import {LoaderButton} from "@/components/custom/loader-button";
+import {AjaxForm} from "@/components/custom/forms/ajax-form";
+import {useState} from "react";
+import {formErrors, FormErrors} from "@/lib/forms";
 
 export default function RegistrationPage() {
-    const [loading, setLoading] = useState<boolean>(false);
-    const [errors, setErrors] = useState<Record<string, string>>(null);
+    const [pending, setPending] = useState(false);
+    const [errors, setErrors] = useState<FormErrors>();
+
+    const {getErrors, clearErrors} = formErrors(errors, setErrors);
 
     return (
         <>
@@ -23,15 +24,26 @@ export default function RegistrationPage() {
 
             <AjaxForm
                 action="/auth/register"
-                duringLoading={setLoading}
-                onResponse={displayFlashMessages}
-                onRequestError={(e) => setErrors(e.data)}
+                duringLoading={setPending}
                 className="flex flex-col gap-4"
+                onResponse={console.log}
+                onRequestError={(err) => setErrors(err.data)}
             >
-                <AjaxInput errors={errors} name="name" placeholder="John Doe"/>
-                <AjaxInput errors={errors} name="email" type="email" placeholder="john@doe.com"/>
+
+                <FormField
+                    onChange={() => clearErrors("name")}
+                    errors={getErrors("name")}
+                    name="name"
+                    placeholder="John Doe"/>
+                <FormField
+                    onChange={() => clearErrors("email")}
+                    errors={getErrors("email")}
+                    name="email"
+                    type="email"
+                    placeholder="john@doe.com"/>
+
                 <div className='flex gap-[10px] w-full flex-col lg:flex-row'>
-                    <LoaderButton loading={loading} type="submit" className='w-full'>
+                    <LoaderButton loading={pending} type="submit" className='w-full'>
                         Submit
                     </LoaderButton>
                 </div>
@@ -40,7 +52,7 @@ export default function RegistrationPage() {
             <p className="text-sm w-full text-center">
                 If you already have an account, <Link
                 className="hover:text-primary hover:underline hover:underline-offset-4"
-                href="/auth/login">login here</Link>
+                href="/auth/login">sign in here</Link>
             </p>
         </>
     )

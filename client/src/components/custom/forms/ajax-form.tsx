@@ -8,8 +8,7 @@ interface AjaxFormProps<T> extends ComponentProps<"form"> {
     onRequestError?: (error: ApiError) => void,
     onResponse?: (response: T) => void,
     duringLoading?: (loading: boolean) => void,
-    additionalData?: Record<string, any>,
-    format?: "form-data" | "json",
+    contentType?: "form-data" | "json",
 }
 
 export function AjaxForm<T, >({
@@ -19,8 +18,7 @@ export function AjaxForm<T, >({
                                   onResponse,
                                   duringLoading,
                                   method = 'POST',
-                                  additionalData = {},
-                                  format = 'json',
+                                  contentType = 'json',
                                   ...props
                               }: AjaxFormProps<T>) {
     const [loading, setLoading] = useState(false);
@@ -34,9 +32,9 @@ export function AjaxForm<T, >({
         try {
             const resData = await apiFetch<T>(action, {
                 method: method,
-                data: {...Object.fromEntries(formData.entries()), ...additionalData},
+                data: Object.fromEntries(formData.entries()),
                 context: "client",
-                format
+                contentType
             });
 
             onResponse?.(resData);
@@ -49,7 +47,7 @@ export function AjaxForm<T, >({
         } finally {
             setLoading(false);
         }
-    }, [onRequestError, onResponse, action, method, additionalData]);
+    }, [onRequestError, onResponse, action, method]);
 
     return (
         <form action={handleSubmit} {...props}>

@@ -9,8 +9,8 @@ export enum AuthStatus {
     Unauthenticated = 'unauthenticated'
 }
 
-export const useAuth = () => {
-    const {user, setUser} = useAppStore(state => state);
+export function useAuth() {
+    const {user, setUser, lastRequestedUrl, setLastRequestedUrl} = useAppStore(state => state);
     let status: AuthStatus;
 
     switch (user) {
@@ -25,24 +25,21 @@ export const useAuth = () => {
             break;
     }
 
-    const authenticate = useCallback(async () => {
-        try {
-            setUser(await apiFetch<User>("/auth/me", {method: "GET"}));
-        } catch (error) {
-            setUser(null);
-        }
+    const authenticate = useCallback(function () {
+        apiFetch<User>("/me").then(setUser).catch(() => setUser(null));
     }, [setUser]);
 
-    const logout = useCallback(async () => {
-        await apiFetch<void>("/auth/logout");
-        setUser(null);
-    }, []);
+    const logout = useCallback(function () {
+        apiFetch<User>("/auth/logout").then(() => setUser(null));
+    }, [setUser]);
 
     return {
-        status,
         user,
-        setUser,
+        status,
         authenticate,
-        logout
+        logout,
+        setUser,
+        lastRequestedUrl,
+        setLastRequestedUrl
     }
 }

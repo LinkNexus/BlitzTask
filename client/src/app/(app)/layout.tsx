@@ -1,27 +1,28 @@
 'use client';
 
-import {useRouter} from "next/navigation";
-import {useEffect} from "react";
 import {useAuth} from "@/lib/auth";
-import {LoadingSpinner} from "@/components/ui/spinner";
+import {useEffect} from "react";
+import {usePathname, useRouter} from "next/navigation";
+import {LoadingScreen} from "@/components/custom/loading-screen";
 
-export default function AppLayout({children}: Readonly<{
-    children: React.ReactNode;
-}>) {
-    const {status, authenticate} = useAuth();
+export default function AppLayout({children}: { children: React.ReactNode }) {
+    const {status, authenticate, setLastRequestedUrl} = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
-        authenticate();
+        if (status === "unknown") {
+            authenticate();
+        }
     }, []);
 
     useEffect(() => {
         if (status === "unauthenticated") {
+            setLastRequestedUrl(pathname);
             router.push("/auth/login");
         }
     }, [status]);
 
-    if (status === "unknown") return <div className="h-screen w-screen flex justify-center items-center"><LoadingSpinner
-        size={60}/></div>;
+    if (status === "unknown") return <LoadingScreen/>;
     if (status === "authenticated") return children;
 }
