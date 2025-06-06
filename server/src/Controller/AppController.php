@@ -17,8 +17,6 @@ final class AppController extends AbstractController
     public function index(Request $request, #[MapQueryParameter] $key = null): JsonResponse
     {
         $flashBag = $request->getSession()->getFlashBag();
-        $this->addFlash("success", "This is a success message.");
-
         if ($key) return $this->json($flashBag->get($key));
         return $this->json($request->getSession()->getFlashBag()->all());
     }

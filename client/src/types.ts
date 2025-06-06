@@ -5,3 +5,13 @@ export interface User {
     roles: string[];
     isVerified: boolean;
 }
+
+export interface Task {
+    id: string;
+    title: string;
+    priority: string;
+    assignee: { name: string; avatar: string };
+    dueDate: string;
+    labels: string[];
+    description: string;
+}

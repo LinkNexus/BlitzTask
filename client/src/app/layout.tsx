@@ -3,6 +3,7 @@ import {Geist, Geist_Mono} from "next/font/google";
 import "./globals.css";
 import {AppStoreProvider} from "@/store/store-provider";
 import {Toaster} from "@/components/ui/sonner";
+import {PageInfosProvider} from "@/components/custom/page-infos-provider";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -30,8 +31,10 @@ export default function RootLayout({
             className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
         <AppStoreProvider>
-            {children}
-            <Toaster/>
+            <PageInfosProvider>
+                {children}
+                <Toaster/>
+            </PageInfosProvider>
         </AppStoreProvider>
         </body>
         </html>

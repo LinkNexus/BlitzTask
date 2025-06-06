@@ -1,26 +1,29 @@
 'use client';
 
-import {AuthHeader} from "@/components/custom/auth/header";
-import Link from "next/link";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import {LoaderButton} from "@/components/custom/loader-button";
 import {AjaxForm} from "@/components/custom/forms/ajax-form";
-import {useState} from "react";
+import {useEffect, useState} from "react";
+import Link from "next/link";
+import {displayFlashMessages} from "@/lib/flash-messages";
+import {usePageInfos} from "@/components/custom/page-infos-provider";
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
+    const {setInfos} = usePageInfos();
+
+    useEffect(() => {
+        setInfos({
+            title: "Welcome Back!",
+            message: "Enter your email address to access our website"
+        })
+    }, []);
 
     return (
         <>
-            <AuthHeader message="Welcome Back to BlitzTask!">
-                <span>
-                    Enter your email address to access our website
-                </span>
-            </AuthHeader>
-
             <AjaxForm
-                onResponse={console.log}
+                onResponse={displayFlashMessages}
                 duringLoading={setLoading}
                 action="/auth/login"
                 className="flex flex-col gap-4"
@@ -37,9 +40,9 @@ export default function LoginPage() {
             </AjaxForm>
 
             <p className="text-sm w-full text-center">
-                If you don't already have an account, <Link
+                Don't have an account, <Link
                 className="hover:text-primary hover:underline hover:underline-offset-4"
-                href="/auth/register">create an account here</Link>
+                href="/auth/register">create one here</Link>
             </p>
         </>
     );

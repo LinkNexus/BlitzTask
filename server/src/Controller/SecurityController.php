@@ -63,7 +63,7 @@ final class SecurityController extends AbstractController
         );
 
         $this->addFlash("success", "Please check your email to verify your account.");
-        return $security->login($user);
+        return $security->login($user, "login_link", "main");
     }
 
     #[Route(path: "/login", name: "login")]
