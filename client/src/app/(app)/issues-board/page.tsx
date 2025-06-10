@@ -18,9 +18,13 @@ import {
 } from '@dnd-kit/core';
 import {arrayMove, SortableContext, verticalListSortingStrategy,} from '@dnd-kit/sortable';
 import {Task} from "@/types";
-import {SortableTask} from "@/components/custom/tasks/sortable-task";
 import {TaskEditModal} from "@/components/custom/tasks/task-edit-modal";
 import {usePageInfos} from "@/components/custom/page-infos-provider";
+import {SortableTask} from "@/components/custom/tasks/sortable-task";
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
+import {MoreVertical, Edit, Trash2} from 'lucide-react';
+import { AddTaskModal } from "@/components/custom/tasks/add-task-modal";
+
 // import {TaskEditModal} from './TaskEditModal';
 // import {NewTaskModal} from './NewTaskModal';
 
@@ -28,12 +32,22 @@ interface IssueBoardProps {
     selectedProject?: string | null;
 }
 
-const IssuesBoardPage: React.FC<IssueBoardProps> = ({selectedProject}) => {
+// Define the Column type for type safety
+interface Column {
+    id: string;
+    title: string;
+    color: string;
+}
+
+const IssuesBoardPage: React.FC<IssueBoardProps> = ({selectedProject}: IssueBoardProps) => {
     const [selectedBoard, setSelectedBoard] = useState('website-redesign');
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
     const [activeId, setActiveId] = useState<string | null>(null);
+    const [renamingColumnId, setRenamingColumnId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
+    const [newTaskColumnId, setNewTaskColumnId] = useState<string | null>(null);
     const {setInfos} = usePageInfos();
 
     const boards = [
@@ -55,15 +69,31 @@ const IssuesBoardPage: React.FC<IssueBoardProps> = ({selectedProject}) => {
         });
     }, []);
 
-    const columns = [
-        {id: 'backlog', title: 'Backlog', color: 'border-gray-300'},
-        {id: 'todo', title: 'To Do', color: 'border-blue-300'},
-        {id: 'in-progress', title: 'In Progress', color: 'border-yellow-300'},
-        {id: 'review', title: 'Review', color: 'border-purple-300'},
-        {id: 'done', title: 'Done', color: 'border-green-300'},
-    ];
+    // Ensure all columns have at least an empty array
+    useEffect(() => {
+        const initializedTasks = {...tasks};
+        columns.forEach((column: Column) => {
+            if (!(initializedTasks as any)[column.id]) {
+                (initializedTasks as any)[column.id] = [];
+            }
+        });
+        setTasks(initializedTasks);
+    }, []);
 
-    const [tasks, setTasks] = useState({
+    const [columns, setColumns] = useState<Column[]>(
+        [
+            {id: 'backlog', title: 'Backlog', color: 'border-gray-300'},
+            {id: 'todo', title: 'To Do', color: 'border-blue-300'},
+            {id: 'in-progress', title: 'In Progress', color: 'border-yellow-300'},
+            {id: 'review', title: 'Review', color: 'border-purple-300'},
+            {id: 'done', title: 'Done', color: 'border-green-300'},
+        ]
+    );
+
+    // Initialize tasks state with all columns, even empty ones
+    const [tasks, setTasks] = useState<{[key: string]: Task[]}>({
+        ...Object.fromEntries(columns.map((col: Column) => [col.id, []])),
+        // Then add the actual tasks
         'backlog': [
             {
                 id: '1',
@@ -176,22 +206,41 @@ const IssuesBoardPage: React.FC<IssueBoardProps> = ({selectedProject}) => {
         const activeId = active.id as string;
         const overId = over.id as string;
 
+        let overColumnId = overId;
+        const isDirectColumnDrop = columns.some((col: Column) => col.id === overId);
+        const isDroppableContainer = overId.startsWith('droppable-');
+        const isContentContainer = overId.startsWith('content-');
+        if (isDirectColumnDrop) {
+            overColumnId = overId;
+        } else if (isDroppableContainer) {
+            overColumnId = overId.replace('droppable-', '');
+        } else if (isContentContainer) {
+            overColumnId = overId.replace('content-', '');
+        } else {
+            const element = document.getElementById(overId);
+            if (element && element.dataset.columnId) {
+                overColumnId = element.dataset.columnId;
+            } else {
+                const taskColumn = findColumn(overId);
+                if (taskColumn) {
+                    overColumnId = taskColumn;
+                }
+            }
+        }
+        if (!columns.some((col: Column) => col.id === overColumnId)) {
+            return;
+        }
         const activeColumn = findColumn(activeId);
-        const overColumn = findColumn(overId) || overId;
-
-        if (!activeColumn || activeColumn === overColumn) return;
-
-        setTasks(prev => {
-            const activeItems = prev[activeColumn as keyof typeof prev];
-            const overItems = prev[overColumn as keyof typeof prev];
-
-            const activeIndex = activeItems.findIndex(item => item.id === activeId);
+        if (!activeColumn || !overColumnId || activeColumn === overColumnId) return;
+        setTasks((prev: {[key: string]: Task[]}) => {
+            const activeItems = prev[activeColumn] || [];
+            const overItems = prev[overColumnId] || [];
+            const activeIndex = activeItems.findIndex((item: Task) => item.id === activeId);
             const activeItem = activeItems[activeIndex];
-
             return {
                 ...prev,
-                [activeColumn]: activeItems.filter(item => item.id !== activeId),
-                [overColumn]: [...overItems, activeItem],
+                [activeColumn]: activeItems.filter((item: Task) => item.id !== activeId),
+                [overColumnId]: [...overItems, activeItem],
             };
         });
     };
@@ -199,23 +248,35 @@ const IssuesBoardPage: React.FC<IssueBoardProps> = ({selectedProject}) => {
     const handleDragEnd = (event: DragEndEvent) => {
         const {active, over} = event;
         setActiveId(null);
-
         if (!over) return;
-
         const activeId = active.id as string;
         const overId = over.id as string;
-
+        const isOverColumn = columns.some((col: Column) => col.id === overId);
+        const isOverDroppable = overId.startsWith('droppable-');
         const activeColumn = findColumn(activeId);
-        const overColumn = findColumn(overId) || overId;
-
-        if (!activeColumn) return;
-
+        const overColumn = isOverColumn ? overId :
+            isOverDroppable ? overId.replace('droppable-', '') :
+                findColumn(overId);
+        if (!activeColumn || !overColumn) return;
+        if (isOverColumn && activeColumn !== overColumn) {
+            setTasks((prev: {[key: string]: Task[]}) => {
+                const activeItems = prev[activeColumn];
+                const overItems = prev[overColumn] || [];
+                const activeIndex = activeItems.findIndex((item: Task) => item.id === activeId);
+                const activeItem = activeItems[activeIndex];
+                return {
+                    ...prev,
+                    [activeColumn]: activeItems.filter((item: Task) => item.id !== activeId),
+                    [overColumn]: [...overItems, activeItem],
+                };
+            });
+            return;
+        }
         if (activeColumn === overColumn) {
-            setTasks(prev => {
-                const items = prev[activeColumn as keyof typeof prev];
-                const activeIndex = items.findIndex(item => item.id === activeId);
-                const overIndex = items.findIndex(item => item.id === overId);
-
+            setTasks((prev: {[key: string]: Task[]}) => {
+                const items = prev[activeColumn];
+                const activeIndex = items.findIndex((item: Task) => item.id === activeId);
+                const overIndex = items.findIndex((item: Task) => item.id === overId);
                 return {
                     ...prev,
                     [activeColumn]: arrayMove(items, activeIndex, overIndex),
@@ -224,9 +285,23 @@ const IssuesBoardPage: React.FC<IssueBoardProps> = ({selectedProject}) => {
         }
     };
 
+    // Find which column contains a task with the given id
     const findColumn = (id: string) => {
+        if (id.startsWith('droppable-')) {
+            return id.replace('droppable-', '');
+        }
+        const element = document.getElementById(id);
+        if (element && element.dataset.columnId) {
+            return element.dataset.columnId;
+        }
+        if (id.startsWith('content-')) {
+            return id.replace('content-', '');
+        }
+        if (columns.some((col: Column) => col.id === id)) {
+            return id;
+        }
         for (const [columnId, items] of Object.entries(tasks)) {
-            if (items.find(item => item.id === id)) {
+            if (Array.isArray(items) && items.some((item: Task) => item?.id === id)) {
                 return columnId;
             }
         }
@@ -239,42 +314,81 @@ const IssuesBoardPage: React.FC<IssueBoardProps> = ({selectedProject}) => {
     };
 
     const handleSaveTask = (updatedTask: Task) => {
-        setTasks(prev => {
+        setTasks((prev: {[key: string]: Task[]}) => {
             const newTasks = {...prev};
-
-            for (const columnKey in newTasks) {
-                const column = columnKey as keyof typeof tasks;
-                const taskIndex = newTasks[column].findIndex(t => t.id === updatedTask.id);
+            for (const columnKey of Object.keys(newTasks)) {
+                const taskIndex = newTasks[columnKey].findIndex((t: Task) => t.id === updatedTask.id);
                 if (taskIndex !== -1) {
-                    newTasks[column][taskIndex] = updatedTask;
+                    newTasks[columnKey][taskIndex] = updatedTask;
                     break;
                 }
             }
-
             return newTasks;
         });
         setIsEditModalOpen(false);
         setEditingTask(null);
     };
 
-    const handleNewTask = (newTask: any) => {
-        const taskWithDescription = {
-            ...newTask,
-            description: newTask.description || ''
-        };
-        setTasks(prev => ({
+    const handleAddTask = (task: Task, columnId: string) => {
+        setTasks((prev: {[key: string]: Task[]}) => ({
             ...prev,
-            'backlog': [...prev.backlog, taskWithDescription]
+            [columnId]: [...(prev[columnId] || []), task]
         }));
+        setIsNewTaskModalOpen(false);
     };
 
-    const activeTask = activeId ? Object.values(tasks).flat().find(task => task.id === activeId) : null;
+    // Move a task to a different column
+    const handleMoveTask = (taskId: string, targetColumnId: string) => {
+        setTasks((prev: {[key: string]: Task[]}) => {
+            const sourceColumnId = findColumn(taskId);
+            if (!sourceColumnId || sourceColumnId === targetColumnId) return prev;
+            const sourceTasks = [...(prev[sourceColumnId] || [])];
+            const targetTasks = [...(prev[targetColumnId] || [])];
+            const taskIdx = sourceTasks.findIndex((t: Task) => t.id === taskId);
+            if (taskIdx === -1) return prev;
+            const [task] = sourceTasks.splice(taskIdx, 1);
+            return {
+                ...prev,
+                [sourceColumnId]: sourceTasks,
+                [targetColumnId]: [...targetTasks, task],
+            };
+        });
+    };
+
+    // Delete a task
+    const handleDeleteTask = (taskId: string) => {
+        setTasks((prev: {[key: string]: Task[]}) => {
+            const columnId = findColumn(taskId);
+            if (!columnId) return prev;
+            return {
+                ...prev,
+                [columnId]: prev[columnId].filter((t: Task) => t.id !== taskId),
+            };
+        });
+    };
+
+    // Rename column handler
+    const handleRenameColumn = (columnId: string, newTitle: string) => {
+        setColumns((prev: Column[]) => prev.map((col: Column) => col.id === columnId ? {...col, title: newTitle} : col));
+        setRenamingColumnId(null);
+        setRenameValue('');
+    };
+    const handleDeleteColumn = (columnId: string) => {
+        setColumns((prev: Column[]) => prev.filter((col: Column) => col.id !== columnId));
+        setTasks((prev: {[key: string]: Task[]}) => {
+            const newTasks = {...prev};
+            delete newTasks[columnId];
+            return newTasks;
+        });
+    };
+
+    const activeTask = activeId ? (Object.values(tasks).flat().find((task: any) => (task as Task).id === activeId) as Task | null) : null;
 
     return (
         <div className="space-y-6 overflow-auto">
             {/* Header */}
             <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-4 mt-2">
+                <div className="flex flex-col md:flex-row items-center space-x-4 mt-2">
                     {boards.map((board) => (
                         <Button
                             key={board.id}
@@ -305,40 +419,78 @@ const IssuesBoardPage: React.FC<IssueBoardProps> = ({selectedProject}) => {
                 onDragEnd={handleDragEnd}
             >
                 <div className="flex space-x-6 overflow-x-auto pb-6">
-                    {columns.map((column) => (
+                    {columns.map((column: Column) => (
                         <div key={column.id} className="flex-shrink-0 w-80">
                             <Card className={`border-t-4 ${column.color}`}>
                                 <CardHeader className="pb-3">
                                     <div className="flex justify-between items-center">
-                                        <CardTitle
-                                            className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                                            {column.title}
-                                        </CardTitle>
-                                        <Badge variant="secondary" className="text-xs">
-                                            {tasks[column.id as keyof typeof tasks]?.length || 0}
-                                        </Badge>
+                                        {renamingColumnId === column.id ? (
+                                            <form onSubmit={(e: React.FormEvent<HTMLFormElement>) => {e.preventDefault(); handleRenameColumn(column.id, renameValue);}} className="flex items-center w-full">
+                                                <input
+                                                    className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide bg-transparent border-b border-gray-400 focus:outline-none w-full"
+                                                    value={renameValue}
+                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRenameValue(e.target.value)}
+                                                    autoFocus
+                                                    onBlur={() => setRenamingColumnId(null)}
+                                                />
+                                            </form>
+                                        ) : (
+                                            <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                                                {column.title}
+                                            </CardTitle>
+                                        )}
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="secondary" className="text-xs">
+                                                {tasks[column.id as keyof typeof tasks]?.length || 0}
+                                            </Badge>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><MoreVertical className="w-4 h-4"/></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => {setRenamingColumnId(column.id); setRenameValue(column.title);}}>
+                                                        <Edit className="w-4 h-4 mr-2"/> Rename
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleDeleteColumn(column.id)} className="text-red-600">
+                                                        <Trash2 className="w-4 h-4 mr-2"/> Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <SortableContext
-                                        items={tasks[column.id as keyof typeof tasks].map(task => task.id)}
+                                        items={tasks[column.id as keyof typeof tasks]?.map((task: Task) => task.id) || []}
                                         strategy={verticalListSortingStrategy}
                                     >
-                                        <div className="space-y-3 min-h-[100px]">
-                                            {tasks[column.id as keyof typeof tasks]?.map((task) => (
+                                        <div
+                                            className="space-y-3 min-h-[100px]"
+                                            id={`droppable-${column.id}`}
+                                            data-column-id={column.id}
+                                        >
+                                            {tasks[column.id as keyof typeof tasks]?.map((task: Task) => (
                                                 <SortableTask
                                                     key={task.id}
                                                     task={task}
                                                     onEdit={handleEditTask}
+                                                    onMove={(targetColumnId: string) => handleMoveTask(task.id, targetColumnId)}
+                                                    onDelete={() => handleDeleteTask(task.id)}
+                                                    moveOptions={columns
+                                                        .filter((col: Column) => col.id !== column.id)
+                                                        .map((col: Column) => ({id: col.id, title: col.title}))
+                                                    }
                                                 />
                                             ))}
                                         </div>
                                     </SortableContext>
-
                                     <Button
                                         variant="ghost"
                                         className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                        onClick={() => setIsNewTaskModalOpen(true)}
+                                        onClick={() => {
+                                            setIsNewTaskModalOpen(true);
+                                            setNewTaskColumnId(column.id);
+                                        }}
                                     >
                                         <Plus className="w-4 h-4 mr-2"/>
                                         Add task
@@ -364,11 +516,13 @@ const IssuesBoardPage: React.FC<IssueBoardProps> = ({selectedProject}) => {
                 onSave={handleSaveTask}
             />
 
-            {/*<NewTaskModal*/}
-            {/*    isOpen={isNewTaskModalOpen}*/}
-            {/*    onClose={() => setIsNewTaskModalOpen(false)}*/}
-            {/*    onSave={handleNewTask}*/}
-            {/*/>*/}
+            {/* New Task Modal */}
+            <AddTaskModal
+                isOpen={isNewTaskModalOpen}
+                onClose={() => setIsNewTaskModalOpen(false)}
+                onAdd={handleAddTask}
+                columnId={newTaskColumnId}
+            />
         </div>
     );
 };

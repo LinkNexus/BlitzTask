@@ -12,9 +12,12 @@ import {Task} from "@/types";
 interface SortableTaskProps {
     task: Task;
     onEdit: (task: Task) => void;
+    onMove: (targetColumnId: string) => void;
+    onDelete: () => void;
+    moveOptions?: { id: string, title: string }[]
 }
 
-export const SortableTask: React.FC<SortableTaskProps> = ({task, onEdit}) => {
+export const SortableTask: React.FC<SortableTaskProps> = ({task, onEdit, onMove, onDelete, moveOptions = []}) => {
     const {
         attributes,
         listeners,
@@ -90,8 +93,25 @@ export const SortableTask: React.FC<SortableTaskProps> = ({task, onEdit}) => {
                                 <DropdownMenuItem onClick={() => onEdit(task)}>
                                     Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>Move</DropdownMenuItem>
-                                <DropdownMenuItem>Delete</DropdownMenuItem>
+                                {moveOptions && moveOptions.length > 0 && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <DropdownMenuItem>
+                                                Move
+                                            </DropdownMenuItem>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            {moveOptions.map(option => (
+                                                <DropdownMenuItem key={option.id} onClick={() => onMove(option.id)}>
+                                                    {option.title}
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
+                                <DropdownMenuItem onClick={() => onDelete()} className="text-red-600 dark:text-red-400">
+                                    Delete
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>

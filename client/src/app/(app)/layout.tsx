@@ -7,7 +7,6 @@ import {LoadingScreen} from "@/components/custom/loading-screen";
 import {useFlashMessages} from "@/lib/flash-messages";
 import {SidebarInset, SidebarProvider} from "@/components/ui/sidebar";
 import {SidebarLeft} from "@/components/custom/sidebar/sidebar-left";
-import {SidebarRight} from "@/components/custom/sidebar/sidebar-right";
 import {AppContent} from "@/components/custom/sidebar/app-content";
 
 export default function AppLayout({children}: { children: React.ReactNode }) {
@@ -36,7 +35,6 @@ export default function AppLayout({children}: { children: React.ReactNode }) {
                 <SidebarInset>
                     <AppContent>{children}</AppContent>
                 </SidebarInset>
-                {pathname === "/" && <SidebarRight/>}
             </SidebarProvider>
         )
     }

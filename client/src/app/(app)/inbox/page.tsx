@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {FileText, Image, MoreVertical, Paperclip, Search, Send, Smile} from 'lucide-react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
@@ -9,6 +9,8 @@ import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {Badge} from '@/components/ui/badge';
 import {Separator} from '@/components/ui/separator';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
+import {usePageInfos} from "@/components/custom/page-infos-provider";
+import type {} from 'react';
 
 interface Message {
     id: number;
@@ -22,9 +24,17 @@ interface Message {
 }
 
 export default function InboxPage() {
+    const {setInfos} = usePageInfos();
     const [selectedConversation, setSelectedConversation] = useState('team-general');
     const [newMessage, setNewMessage] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+    useEffect(() => {
+        setInfos({
+            title: "Messages",
+            currentActiveNavItem: 'Inbox',
+        })
+    }, []);
 
     const conversations = [
         {
@@ -142,8 +152,9 @@ export default function InboxPage() {
         }
     };
 
+    // Fix implicit any for event handlers
     const handleEmojiClick = (emoji: string) => {
-        setNewMessage(prev => prev + emoji);
+        setNewMessage((prev: string) => prev + emoji);
         setShowEmojiPicker(false);
     };
 
@@ -159,181 +170,170 @@ export default function InboxPage() {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <div className="flex w-full justify-center items-center space-x-2">
-                    <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"/>
-                        <Input placeholder="Search conversations..." className="pl-10 w-64"/>
+        <div className="flex flex-col lg:flex-row gap-6 h-[80vh] lg:h-[75vh]">
+            {/* Sidebar: Conversations List */}
+            <Card className="w-full max-w-md lg:w-80 flex-shrink-0 h-full flex flex-col shadow-md border-0 bg-background/80 backdrop-blur-md">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">Conversations</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 flex-1 overflow-y-auto">
+                    <div className="px-4 pb-2">
+                        <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                            <Input placeholder="Search..." className="pl-10 rounded-full bg-muted" />
+                        </div>
                     </div>
-                    <Button variant="outline">
-                        <MoreVertical className="w-4 h-4"/>
-                    </Button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
-                {/* Conversations List */}
-                <Card className="lg:col-span-1">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Conversations</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="space-y-1">
-                            {conversations.map((conv) => (
-                                <div
-                                    key={conv.id}
-                                    className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
-                                        selectedConversation === conv.id ? 'bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-500' : ''
-                                    }`}
-                                    onClick={() => setSelectedConversation(conv.id)}
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            <h4 className="font-medium text-gray-900 dark:text-white">{conv.name}</h4>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{conv.lastMessage}</p>
-                                            <div className="flex items-center justify-between mt-1">
-                                                <span
-                                                    className="text-xs text-gray-400">{conv.participants} participants</span>
-                                                <span className="text-xs text-gray-400">{conv.time}</span>
-                                            </div>
-                                        </div>
-                                        {conv.unread > 0 && (
-                                            <Badge className="bg-blue-500 text-white text-xs">{conv.unread}</Badge>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Chat Area */}
-                <Card className="lg:col-span-3 flex flex-col">
-                    <CardHeader className="flex-shrink-0">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <CardTitle className="text-lg">
-                                    {conversations.find(c => c.id === selectedConversation)?.name}
-                                </CardTitle>
-                                <p className="text-sm text-gray-500">
-                                    {conversations.find(c => c.id === selectedConversation)?.participants} participants
-                                </p>
-                            </div>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                        <MoreVertical className="w-4 h-4"/>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuItem>View Info</DropdownMenuItem>
-                                    <DropdownMenuItem>Mute Notifications</DropdownMenuItem>
-                                    <DropdownMenuItem>Leave Conversation</DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                    </CardHeader>
-
-                    <Separator/>
-
-                    {/* Messages */}
-                    <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                        {messages.map((message) => (
-                            <div key={message.id} className="flex space-x-3">
-                                <Avatar className="w-8 h-8 flex-shrink-0">
-                                    <AvatarImage src="/placeholder.svg"/>
-                                    <AvatarFallback className="text-xs">{message.avatar}</AvatarFallback>
+                    <div className="space-y-1 mt-2">
+                        {conversations.map((conv) => (
+                            <div
+                                key={conv.id}
+                                className={`flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors group ${selectedConversation === conv.id ? 'bg-primary/10 border-l-4 border-primary' : 'hover:bg-muted/60'}`}
+                                onClick={() => setSelectedConversation(conv.id)}
+                            >
+                                <Avatar className="w-9 h-9">
+                                    <AvatarImage src="/placeholder.svg" />
+                                    <AvatarFallback>{conv.name.split(' ').map((w: string) => w[0]).join('').slice(0,2)}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center space-x-2">
-                                        <span
-                                            className="font-medium text-sm text-gray-900 dark:text-white">{message.sender}</span>
-                                        <span className="text-xs text-gray-500">{message.timestamp}</span>
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="font-medium text-sm text-foreground truncate">{conv.name}</h4>
+                                        {conv.unread > 0 && (
+                                            <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full animate-pulse">{conv.unread}</Badge>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground truncate">{conv.lastMessage}</p>
+                                    <div className="flex items-center justify-between mt-0.5">
+                                        <span className="text-xs text-muted-foreground">{conv.participants} members</span>
+                                        <span className="text-xs text-muted-foreground">{conv.time}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Main Chat Area */}
+            <Card className="flex-1 flex flex-col h-full shadow-md border-0 bg-background/80 backdrop-blur-md">
+                <CardHeader className="flex-shrink-0 border-b px-6 py-4 bg-background/80">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle className="text-lg">
+                                {conversations.find((c) => c.id === selectedConversation)?.name}
+                            </CardTitle>
+                            <p className="text-xs text-muted-foreground">
+                                {conversations.find((c) => c.id === selectedConversation)?.participants} members
+                            </p>
+                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="rounded-full">
+                                    <MoreVertical className="w-5 h-5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem>View Info</DropdownMenuItem>
+                                <DropdownMenuItem>Mute Notifications</DropdownMenuItem>
+                                <DropdownMenuItem>Leave Conversation</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </CardHeader>
+
+                {/* Messages */}
+                <CardContent className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-muted/40">
+                    {messages.map((message: Message) => {
+                        const isMe = message.sender === 'You';
+                        return (
+                            <div key={message.id} className={`flex items-end gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
+                                <Avatar className="w-8 h-8 flex-shrink-0">
+                                    <AvatarImage src="/placeholder.svg" />
+                                    <AvatarFallback className="text-xs">{message.avatar}</AvatarFallback>
+                                </Avatar>
+                                <div className={`flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <span className="font-medium text-xs text-foreground">{message.sender}</span>
+                                        <span className="text-xs text-muted-foreground">{message.timestamp}</span>
                                     </div>
                                     {message.type === 'text' ? (
-                                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{message.content}</p>
+                                        <div className={`rounded-2xl px-4 py-2 text-sm ${isMe ? 'bg-primary text-primary-foreground' : 'bg-background border'} shadow-sm`}>
+                                            {message.content}
+                                        </div>
                                     ) : (
-                                        <div
-                                            className="flex items-center space-x-2 mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg max-w-xs">
+                                        <div className={`flex items-center gap-2 mt-1 p-3 rounded-xl max-w-xs ${isMe ? 'bg-primary/80 text-primary-foreground' : 'bg-background border'} shadow-sm`}>
                                             {getMessageIcon(message.type)}
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                                    {message.fileName || message.content}
-                                                </p>
+                                                <p className="text-sm font-medium truncate">{message.fileName || message.content}</p>
                                                 {message.fileSize && (
-                                                    <p className="text-xs text-gray-500">{message.fileSize}</p>
+                                                    <p className="text-xs text-muted-foreground">{message.fileSize}</p>
                                                 )}
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        ))}
-                    </CardContent>
+                        );
+                    })}
+                </CardContent>
 
-                    <Separator/>
-
-                    {/* Message Input */}
-                    <div className="p-4 flex-shrink-0">
-                        {showEmojiPicker && (
-                            <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                <div className="grid grid-cols-6 gap-2">
-                                    {emojis.map((emoji) => (
-                                        <button
-                                            key={emoji}
-                                            onClick={() => handleEmojiClick(emoji)}
-                                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-lg"
-                                        >
-                                            {emoji}
-                                        </button>
-                                    ))}
-                                </div>
+                {/* Message Input */}
+                <div className="px-6 py-4 border-t bg-background/90 sticky bottom-0 z-10">
+                    {showEmojiPicker && (
+                        <div className="mb-3 p-3 bg-muted rounded-xl shadow-lg w-fit">
+                            <div className="grid grid-cols-6 gap-2">
+                                {emojis.map((emoji: string) => (
+                                    <button
+                                        key={emoji}
+                                        onClick={() => handleEmojiClick(emoji)}
+                                        className="p-2 hover:bg-accent rounded text-lg transition-colors"
+                                    >
+                                        {emoji}
+                                    </button>
+                                ))}
                             </div>
-                        )}
-                        <div className="flex space-x-2">
-                            <div className="flex space-x-1">
-                                <input
-                                    type="file"
-                                    id="file-upload"
-                                    className="hidden"
-                                    onChange={handleFileUpload}
-                                    multiple
-                                />
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => document.getElementById('file-upload')?.click()}
-                                    className="p-2"
-                                >
-                                    <Paperclip className="w-4 h-4"/>
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                    className="p-2"
-                                >
-                                    <Smile className="w-4 h-4"/>
-                                </Button>
-                            </div>
-                            <Input
-                                placeholder="Type a message..."
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                                className="flex-1"
-                            />
-                            <Button
-                                onClick={handleSendMessage}
-                                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-                            >
-                                <Send className="w-4 h-4"/>
-                            </Button>
                         </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="file"
+                            id="file-upload"
+                            className="hidden"
+                            onChange={handleFileUpload}
+                            multiple
+                        />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => document.getElementById('file-upload')?.click()}
+                            className="rounded-full"
+                        >
+                            <Paperclip className="w-5 h-5" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className="rounded-full"
+                        >
+                            <Smile className="w-5 h-5" />
+                        </Button>
+                        <Input
+                            placeholder="Type a message..."
+                            value={newMessage}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewMessage(e.target.value)}
+                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleSendMessage()}
+                            className="flex-1 rounded-full bg-muted px-4"
+                        />
+                        <Button
+                            onClick={handleSendMessage}
+                            className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 rounded-full shadow-md"
+                            size="icon"
+                        >
+                            <Send className="w-5 h-5" />
+                        </Button>
                     </div>
-                </Card>
-            </div>
+                </div>
+            </Card>
         </div>
     );
 };

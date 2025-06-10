@@ -14,14 +14,34 @@ import {
     Sparkles,
     Trash2,
 } from "lucide-react"
-import {Favorites} from "@/components/custom/sidebar/elements/favorites";
-import {NavMain} from "@/components/custom/sidebar/elements/main";
-import {NavSecondary} from "@/components/custom/sidebar/elements/secondary";
-import {NavProjects} from "@/components/custom/sidebar/elements/projects";
-import {TeamSwitcher} from "@/components/custom/sidebar/elements/team-switcher";
-import {Sidebar, SidebarContent, SidebarHeader, SidebarRail,} from "@/components/ui/sidebar"
-import {usePageInfos} from "@/components/custom/page-infos-provider";
+import { Favorites } from "@/components/custom/sidebar/elements/favorites";
+import { NavMain } from "@/components/custom/sidebar/elements/main";
+import { NavSecondary } from "@/components/custom/sidebar/elements/secondary";
+import { NavProjects } from "@/components/custom/sidebar/elements/projects";
+import { TeamSwitcher } from "@/components/custom/sidebar/elements/team-switcher";
+import { Sidebar, SidebarContent, SidebarHeader, SidebarRail, } from "@/components/ui/sidebar"
+import { usePageInfos } from "@/components/custom/page-infos-provider";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+
 // This is sample data.
+type NavMainItem = {
+    title: string;
+    url: string;
+    icon: any;
+    isActive?: boolean;
+    badge?: string;
+    onClick?: (e: React.MouseEvent) => void;
+};
+
+type NavSecondaryItem = {
+    title: string;
+    url: string;
+    icon: any;
+    isActive?: boolean;
+    badge?: string;
+};
+
 const data = {
     teams: [
         {
@@ -68,7 +88,7 @@ const data = {
             icon: Inbox,
             badge: "10",
         },
-    ],
+    ] as NavMainItem[],
     navSecondary: [
         {
             title: "Calendar",
@@ -95,7 +115,7 @@ const data = {
             url: "#",
             icon: MessageCircleQuestion,
         },
-    ],
+    ] as NavSecondaryItem[],
     favorites: [
         {
             name: "Project Management & Task Tracking",
@@ -258,30 +278,55 @@ const data = {
 }
 
 export function SidebarLeft({
-                                ...props
-                            }: React.ComponentProps<typeof Sidebar>) {
-    const {infos} = usePageInfos();
-    const navMainItems = data.navMain.map((item) => {
-        item["isActive"] = item.title === infos?.currentActiveNavItem;
-        return item;
-    });
-    const navSecondaryItems = data.navSecondary.map((item) => {
-        item["isActive"] = item.title === infos?.currentActiveNavItem;
-        return item;
-    });
+    ...props
+}: React.ComponentProps<typeof Sidebar>) {
+    const { infos } = usePageInfos();
+    const [isSearchModalOpen, setSearchModalOpen] = React.useState(false);
+    const navMainItems = data.navMain.map((item) => ({
+        ...item,
+        isActive: item.title === infos?.currentActiveNavItem,
+        onClick: item.title === "Search"
+            ? (e: React.MouseEvent) => {
+                e.preventDefault();
+                setSearchModalOpen(true);
+            }
+            : item.onClick,
+    }));
+    const navSecondaryItems = data.navSecondary.map((item) => ({
+        ...item,
+        isActive: item.title === infos?.currentActiveNavItem,
+    }));
 
     return (
-        <Sidebar className="border-r-0" {...props}>
-            <SidebarHeader>
-                <TeamSwitcher teams={data.teams}/>
-                <NavMain items={navMainItems}/>
-            </SidebarHeader>
-            <SidebarContent>
-                <Favorites favorites={data.favorites}/>
-                <NavProjects projects={data.projects}/>
-                <NavSecondary items={navSecondaryItems} className="mt-auto"/>
-            </SidebarContent>
-            <SidebarRail/>
-        </Sidebar>
+        <>
+            <Sidebar className="border-r-0" {...props}>
+                <SidebarHeader>
+                    <TeamSwitcher teams={data.teams} />
+                    <NavMain items={navMainItems} />
+                </SidebarHeader>
+                <SidebarContent>
+                    <Favorites favorites={data.favorites} />
+                    <NavProjects projects={data.projects} />
+                    <NavSecondary items={navSecondaryItems} className="mt-auto" />
+                </SidebarContent>
+                <SidebarRail />
+            </Sidebar>
+            <Dialog open={isSearchModalOpen} onOpenChange={setSearchModalOpen}>
+                <DialogContent aria-describedby={undefined} className="max-w-lg w-full">
+                    <DialogHeader>
+                        <DialogTitle>
+                            Search
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="flex items-center gap-2">
+                        <Input
+                            id="link"
+                            placeholder="Type to search..."
+                            className="w-full"
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
     )
 }

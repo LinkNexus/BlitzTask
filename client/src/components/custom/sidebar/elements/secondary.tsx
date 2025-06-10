@@ -20,7 +20,6 @@ export function NavSecondary({items, ...props}: {
         isActive?: boolean
     }[]
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
-    console.log(items);
     return (
         <SidebarGroup {...props}>
             <SidebarGroupContent>
