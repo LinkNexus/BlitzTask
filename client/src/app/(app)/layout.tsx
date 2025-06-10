@@ -5,6 +5,9 @@ import {useEffect} from "react";
 import {usePathname, useRouter} from "next/navigation";
 import {LoadingScreen} from "@/components/custom/loading-screen";
 import {useFlashMessages} from "@/lib/flash-messages";
+import {SidebarInset, SidebarProvider} from "@/components/ui/sidebar";
+import {SidebarLeft} from "@/components/custom/sidebar/sidebar-left";
+import {AppContent} from "@/components/custom/sidebar/app-content";
 
 export default function AppLayout({children}: { children: React.ReactNode }) {
     const {status, authenticate, setLastRequestedUrl} = useAuth();
@@ -12,13 +15,11 @@ export default function AppLayout({children}: { children: React.ReactNode }) {
     const pathname = usePathname();
 
     useFlashMessages();
-
     useEffect(() => {
         if (status === "unknown") {
             authenticate();
         }
     }, []);
-
     useEffect(() => {
         if (status === "unauthenticated") {
             setLastRequestedUrl(pathname);
@@ -27,5 +28,14 @@ export default function AppLayout({children}: { children: React.ReactNode }) {
     }, [status]);
 
     if (status === "unknown") return <LoadingScreen/>;
-    if (status === "authenticated") return children;
+    if (status === "authenticated") {
+        return (
+            <SidebarProvider>
+                <SidebarLeft/>
+                <SidebarInset>
+                    <AppContent>{children}</AppContent>
+                </SidebarInset>
+            </SidebarProvider>
+        )
+    }
 }

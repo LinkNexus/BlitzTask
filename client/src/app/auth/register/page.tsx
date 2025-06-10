@@ -1,32 +1,41 @@
 "use client";
 
-import {AuthHeader} from "@/components/custom/auth/header";
 import Link from "next/link";
 import {FormField} from "@/components/custom/forms/form-field";
 import {LoaderButton} from "@/components/custom/loader-button";
 import {AjaxForm} from "@/components/custom/forms/ajax-form";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {formErrors, FormErrors} from "@/lib/forms";
+import {useAppStore} from "@/store/store-provider";
+import {User} from "@/types";
+import {displayFlashMessages} from "@/lib/flash-messages";
+import {usePageInfos} from "@/components/custom/page-infos-provider";
 
 export default function RegistrationPage() {
     const [pending, setPending] = useState(false);
     const [errors, setErrors] = useState<FormErrors>();
+    const {setInfos} = usePageInfos();
+    const {setUser} = useAppStore(state => state);
+
+    useEffect(() => {
+        setInfos({
+            title: "Welcome!",
+            message: "Enter your information in order to create an account"
+        })
+    }, []);
 
     const {getErrors, clearErrors} = formErrors(errors, setErrors);
 
     return (
         <>
-            <AuthHeader message="Welcome to BlitzTask!">
-                <span>
-                    Enter your information in order to create an account
-                </span>
-            </AuthHeader>
-
-            <AjaxForm
+            <AjaxForm<User>
                 action="/auth/register"
                 duringLoading={setPending}
                 className="flex flex-col gap-4"
-                onResponse={console.log}
+                onResponse={(res) => {
+                    displayFlashMessages();
+                    setUser(res);
+                }}
                 onRequestError={(err) => setErrors(err.data)}
             >
 
