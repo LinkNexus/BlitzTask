@@ -9,9 +9,6 @@ use Symfony\Component\Security\Http\Event\LogoutEvent;
 
 final readonly class LogoutSubscriber implements EventSubscriberInterface
 {
-    public function __construct(#[Autowire("%env(CLIENT_URL)%")] private string $clientUrl)
-    {
-    }
 
     public static function getSubscribedEvents(): array
     {

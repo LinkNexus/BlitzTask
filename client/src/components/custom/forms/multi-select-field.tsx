@@ -9,7 +9,7 @@ export const MultiSelectField = ({
   name,
   label,
 }: {
-  options: { value: string; element: ReactNode }[];
+  options: { value: any; element: ReactNode }[];
   name: string;
   label?: string;
 }) => {
@@ -44,9 +44,9 @@ export const MultiSelectField = ({
       )}
 
       <div>
-        {options.map(({ value, element }) => (
+        {options.map(({ value, element }, index) => (
           <div
-            key={value}
+            key={index}
             className="flex items-center space-x-2 border p-2 rounded mb-2 shadow-sm hover:bg-gray-50"
           >
             <Label className="w-full">
@@ -60,7 +60,6 @@ export const MultiSelectField = ({
                   }
                 }}
                 type="checkbox"
-                value={value}
                 className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               {element}

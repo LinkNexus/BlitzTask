@@ -1,66 +1,62 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
-use App\DTO\CreateUserDTO;
 use App\Entity\User;
+use App\Event\LoginAttemptEvent;
+use App\Event\UserCreatedEvent;
 use App\Security\EmailVerifier;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\Notifier\NotifierInterface;
-use Symfony\Component\Notifier\Recipient\Recipient;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\LoginLink\LoginLinkHandlerInterface;
-use Symfony\Component\Security\Http\LoginLink\LoginLinkNotification;
 use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 
 #[Route(path: "/auth", name: "auth.")]
 final class SecurityController extends AbstractController
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly EmailVerifier $emailVerifier)
+    public function __construct(
+        private readonly EntityManagerInterface   $entityManager,
+        private readonly EmailVerifier            $emailVerifier,
+        private readonly EventDispatcherInterface $eventDispatcher
+    )
     {
     }
 
     #[Route(path: "/register", name: "register", methods: ["POST"])]
     public function register(
-        #[MapRequestPayload] CreateUserDTO $userDTO,
-        Security                           $security,
+        #[MapRequestPayload] User $user,
+        Security                  $security,
     ): Response
     {
-        if ($this->entityManager->getRepository(User::class)->findOneBy(['email' => $userDTO->email])) {
+        if ($this->entityManager->getRepository(User::class)->findOneBy(['email' => $user->getEmail()])) {
             return $this->json([
                 "violations" => [
                     [
                         "propertyPath" => "email",
-                        "title" => "The email {$userDTO->email} is already in use by another account."
+                        "title" => "The email {$user->getEmail()} is already in use by another account."
                     ]
                 ]
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        $this->entityManager->persist((new User())
-            ->setEmail($userDTO->email)
-            ->setName($userDTO->name)
-        );
+        $this->entityManager->persist($user);
         $this->entityManager->flush();
 
-        $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $userDTO->email]);
-
-        $this->emailVerifier->sendEmailConfirmation("auth.verify_email", $user, (new TemplatedEmail)
-            ->to(new Address($user->getEmail(), $user->getName()))
-            ->subject("Registration Confirmation to BlitzTask!")
-            ->htmlTemplate("auth/registration_email.html.twig")
-        );
+        $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $user->getEmail()]);
+        $this->eventDispatcher->dispatch(new UserCreatedEvent($user));
 
         $this->addFlash("success", "Please check your email to verify your account.");
         return $security->login($user, "login_link", "main");
@@ -77,13 +73,7 @@ final class SecurityController extends AbstractController
         $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $data['email']]);
 
         if ($user) {
-            $loginLinkDetails = $loginLinkHandler->createLoginLink($user);
-            $notification = new LoginLinkNotification(
-                $loginLinkDetails,
-                "Sign In to BlitzTask!"
-            );
-            $recipient = new Recipient($user->getEmail());
-            $notifier->send($notification, $recipient);
+            $this->eventDispatcher->dispatch(new LoginAttemptEvent($user));
         }
 
         $this->addFlash("success", "A login link has been sent to your email address.");

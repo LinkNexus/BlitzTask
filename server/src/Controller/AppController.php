@@ -18,7 +18,7 @@ final class AppController extends AbstractController
     {
         $flashBag = $request->getSession()->getFlashBag();
         if ($key) return $this->json($flashBag->get($key));
-        return $this->json($request->getSession()->getFlashBag()->all());
+        return $this->json($flashBag->all());
     }
 
     #[Route(path: "/me", name: "me", methods: ["GET"])]
