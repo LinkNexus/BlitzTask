@@ -11,7 +11,7 @@ export interface Task {
     id: number;
     title: string;
     priority: TaskPriority;
-    assignees: Pick<User, 'name' | 'avatar'>[];
+    assignees: TaskAssignee[];
     dueDate: string;
     labels: string[];
     description: string;
@@ -27,3 +27,4 @@ export interface TaskColumn {
 }
 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TaskAssignee = Pick<User, 'id' | 'name' | 'avatar'>;

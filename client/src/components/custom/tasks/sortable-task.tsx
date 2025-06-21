@@ -171,7 +171,7 @@ export const SortableTask: React.FC<SortableTaskProps> = ({
             </div>
             <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
               <Calendar className="w-3 h-3" />
-              <span>{task.dueDate}</span>
+              <span>{new Date(task.dueDate).toLocaleDateString()}</span>
             </div>
           </div>
         </div>

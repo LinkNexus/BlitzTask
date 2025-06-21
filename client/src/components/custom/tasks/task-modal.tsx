@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAppStore } from "@/store/store-provider";
-import { Task, TaskPriority, User } from "@/types";
+import { Task, TaskAssignee, TaskPriority } from "@/types";
 import { CollectionField } from "../forms/collection-field";
 import { FormField } from "../forms/form-field";
 import { MultiSelectField } from "../forms/multi-select-field";
@@ -18,7 +18,8 @@ export interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: { columnId: number } | Task;
-  onSave: (task: Task) => void;
+  onSave: (task: Omit<Task, "assignees"> & { assignees: number[] }) => void;
+  users: TaskAssignee[];
 }
 
 export const TaskModal = ({
@@ -26,13 +27,8 @@ export const TaskModal = ({
   onClose,
   task,
   onSave,
+  users,
 }: TaskModalProps) => {
-  const users: Pick<User, "name" | "avatar">[] = [
-    { name: "John Doe", avatar: "JD" },
-    { name: "Jane Smith", avatar: "JS" },
-    { name: "Alice Johnson", avatar: "AJ" },
-    { name: "Bob Brown", avatar: "BB" },
-  ];
   const { mode } = useAppStore((state) => state);
 
   const handleSubmit = (formData: FormData) => {
@@ -45,7 +41,7 @@ export const TaskModal = ({
       priority: data.priority,
       dueDate: data.dueDate,
       labels: JSON.parse(data.labels),
-      assignees: JSON.parse(data.assignees),
+      assignees: JSON.parse(data.assignees) as number[],
       columnId: task.columnId,
     });
   };
@@ -93,7 +89,7 @@ export const TaskModal = ({
               />
 
               <FormField
-                defaultValue={"dueDate" in task ? task.dueDate : ""}
+                value={"dueDate" in task ? task.dueDate : ""}
                 name="dueDate"
                 type="date"
                 placeholder="Select due date"
@@ -107,10 +103,14 @@ export const TaskModal = ({
 
             {mode === "teams" && (
               <MultiSelectField
+                value={
+                  "assignees" in task ? task.assignees.map((a) => a.id) : []
+                }
+                optionsBlockClassName="max-h-50 overflow-y-auto"
                 name="assignees"
                 label="Assign Users"
                 options={users.map((user) => ({
-                  value: user,
+                  value: user.id,
                   element: (
                     <div className="flex items-center space-x-2">
                       <Avatar>
@@ -140,7 +140,7 @@ export const TaskModal = ({
             <Button onClick={onClose} type="button" variant="outline">
               Cancel
             </Button>
-            <Button>{task ? "Save Changes" : "Create Task"}</Button>
+            <Button>{"id" in task ? "Save Changes" : "Create Task"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

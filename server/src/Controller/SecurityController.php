@@ -19,9 +19,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\Notifier\NotifierInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\LoginLink\LoginLinkHandlerInterface;
 use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 
 #[Route(path: "/auth", name: "auth.")]
@@ -54,19 +52,15 @@ final class SecurityController extends AbstractController
 
         $this->entityManager->persist($user);
         $this->entityManager->flush();
+        $this->entityManager->refresh($user);
 
-        $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $user->getEmail()]);
         $this->eventDispatcher->dispatch(new UserCreatedEvent($user));
-
-        $this->addFlash("success", "Please check your email to verify your account.");
         return $security->login($user, "login_link", "main");
     }
 
     #[Route(path: "/login", name: "login")]
     public function login(
-        Request                   $request,
-        LoginLinkHandlerInterface $loginLinkHandler,
-        NotifierInterface         $notifier
+        Request $request,
     ): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -76,7 +70,6 @@ final class SecurityController extends AbstractController
             $this->eventDispatcher->dispatch(new LoginAttemptEvent($user));
         }
 
-        $this->addFlash("success", "A login link has been sent to your email address.");
         return $this->json(['status' => 'success'], Response::HTTP_OK);
     }
 

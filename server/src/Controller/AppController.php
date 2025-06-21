@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 final class AppController extends AbstractController
 {
@@ -22,6 +23,7 @@ final class AppController extends AbstractController
     }
 
     #[Route(path: "/me", name: "me", methods: ["GET"])]
+    #[IsGranted("IS_AUTHENTICATED_FULLY")]
     public function me(): JsonResponse
     {
         return $this->json(

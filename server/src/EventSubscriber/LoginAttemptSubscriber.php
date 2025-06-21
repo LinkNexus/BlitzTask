@@ -4,6 +4,7 @@ namespace App\EventSubscriber;
 
 use App\Event\LoginAttemptEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Notifier\NotifierInterface;
 use Symfony\Component\Notifier\Recipient\Recipient;
 use Symfony\Component\Security\Http\LoginLink\LoginLinkHandlerInterface;
@@ -13,7 +14,8 @@ final readonly class LoginAttemptSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private LoginLinkHandlerInterface $loginLinkHandler,
-        private NotifierInterface         $notifier
+        private NotifierInterface         $notifier,
+        private RequestStack              $requestStack
     )
     {
     }
@@ -35,5 +37,6 @@ final readonly class LoginAttemptSubscriber implements EventSubscriberInterface
         );
         $recipient = new Recipient($user->getEmail());
         $this->notifier->send($notification, $recipient);
+        $this->requestStack->getSession()->getFlashBag()->add("success", "A login link has been sent to your email address.");
     }
 }

@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useArrayState } from "@/hooks/use-array";
+import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import { ReactNode } from "react";
 
@@ -8,16 +9,20 @@ export const MultiSelectField = ({
   options,
   name,
   label,
+  optionsBlockClassName,
+  value,
 }: {
-  options: { value: any; element: ReactNode }[];
+  options: { value: string | number; element: ReactNode }[];
   name: string;
   label?: string;
+  optionsBlockClassName?: string;
+  value?: (string | number)[];
 }) => {
   const {
     state: selectedOptions,
     addUnique: addSelectedOption,
     removeItem: removeSelectedOption,
-  } = useArrayState([] as string[]);
+  } = useArrayState(value || []);
 
   return (
     <div className="flex flex-col gap-2">
@@ -43,7 +48,7 @@ export const MultiSelectField = ({
         <div className="text-sm text-gray-500">No options available</div>
       )}
 
-      <div>
+      <div className={cn(optionsBlockClassName)}>
         {options.map(({ value, element }, index) => (
           <div
             key={index}

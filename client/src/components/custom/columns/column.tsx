@@ -17,19 +17,36 @@ import { Edit, MoreVertical, Plus, Trash2 } from "lucide-react";
 import { SortableTask } from "../tasks/sortable-task";
 
 interface TaskColumnProps {
+  onAdd: (position: "before" | "after") => void;
+  onEdit: () => void;
+  onDelete: () => void;
   column: TaskColumn;
   columns: TaskColumn[];
   tasksOptions: {
     onMove: (taskId: number, targetColumnId: number) => void;
     onEdit: (task: Task) => void;
+    onDelete: (taskId: number) => void;
+    onAdd: () => void;
   };
 }
 
-export const Column = ({ column, columns, tasksOptions }: TaskColumnProps) => {
+export const Column = ({
+  column,
+  columns,
+  tasksOptions,
+  onAdd,
+  onEdit,
+  onDelete,
+}: TaskColumnProps) => {
   return (
     <div key={column.id} className="flex-shrink-0 w-80">
       <Card className={`border-t-4`} style={{ borderColor: column.color }}>
-        <ColumnHeader column={column} />
+        <ColumnHeader
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onAdd={onAdd}
+          column={column}
+        />
         <ColumnBody
           column={column}
           columns={columns}
@@ -40,7 +57,12 @@ export const Column = ({ column, columns, tasksOptions }: TaskColumnProps) => {
   );
 };
 
-const ColumnHeader = ({ column }: Pick<TaskColumnProps, "column">) => {
+const ColumnHeader = ({
+  column,
+  onAdd,
+  onEdit,
+  onDelete,
+}: Pick<TaskColumnProps, "column" | "onAdd" | "onDelete" | "onEdit">) => {
   return (
     <CardHeader className="pb-3">
       <div className="flex justify-between items-center">
@@ -58,10 +80,10 @@ const ColumnHeader = ({ column }: Pick<TaskColumnProps, "column">) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={onEdit}>
                 <Edit className="w-4 h-4 mr-2" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600">
+              <DropdownMenuItem onClick={onDelete} className="text-red-600">
                 <Trash2 className="w-4 h-4 mr-2" /> Delete
               </DropdownMenuItem>
               <DropdownMenu>
@@ -71,30 +93,10 @@ const ColumnHeader = ({ column }: Pick<TaskColumnProps, "column">) => {
                   </DropdownMenuItem>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem
-                  // onClick={() => {
-                  //   const score = getColumnScore(
-                  //     column,
-                  //     index,
-                  //     "before"
-                  //   );
-                  //   setEditingColumn({ score });
-                  //   setIsColumnModalOpen(true);
-                  // }}
-                  >
+                  <DropdownMenuItem onClick={() => onAdd("before")}>
                     Before
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                  // onClick={() => {
-                  //   const score = getColumnScore(
-                  //     column,
-                  //     index,
-                  //     "after"
-                  //   );
-                  //   setEditingColumn({ score });
-                  //   setIsColumnModalOpen(true);
-                  // }}
-                  >
+                  <DropdownMenuItem onClick={() => onAdd("after")}>
                     After
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -107,7 +109,11 @@ const ColumnHeader = ({ column }: Pick<TaskColumnProps, "column">) => {
   );
 };
 
-const ColumnBody = ({ column, columns, tasksOptions }: TaskColumnProps) => {
+const ColumnBody = ({
+  column,
+  columns,
+  tasksOptions,
+}: Omit<TaskColumnProps, "onAdd" | "onEdit" | "onDelete">) => {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   return (
     <CardContent className="space-y-3">
@@ -129,7 +135,7 @@ const ColumnBody = ({ column, columns, tasksOptions }: TaskColumnProps) => {
               onMove={(targetColumnId) =>
                 tasksOptions.onMove(task.id, targetColumnId)
               }
-              onDelete={() => {}}
+              onDelete={() => tasksOptions.onDelete(task.id)}
               moveOptions={columns
                 .filter((col: TaskColumn) => col.id !== column.id)
                 .map((col: TaskColumn) => ({
@@ -141,6 +147,7 @@ const ColumnBody = ({ column, columns, tasksOptions }: TaskColumnProps) => {
         </SortableContext>
       </div>
       <Button
+        onClick={tasksOptions.onAdd}
         variant="ghost"
         className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
       >

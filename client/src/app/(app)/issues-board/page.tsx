@@ -1,10 +1,12 @@
 "use client";
 
 import { Column } from "@/components/custom/columns/column";
+import { TasksColumnModal } from "@/components/custom/columns/tasks-colmn-modal";
 import { usePageInfos } from "@/components/custom/page-infos-provider";
 import { SortableTask } from "@/components/custom/tasks/sortable-task";
 import { TaskModal } from "@/components/custom/tasks/task-modal";
 import { Button } from "@/components/ui/button";
+import { useAppStore } from "@/store/store-provider";
 import { Task, TaskColumn } from "@/types";
 import {
   closestCorners,
@@ -24,6 +26,19 @@ import {
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
+const users = [
+  { id: 1, name: "Sarah Wilson", avatar: "SW" },
+  { id: 2, name: "Mike Johnson", avatar: "MJ" },
+  { id: 3, name: "Emma Davis", avatar: "ED" },
+  { id: 4, name: "Alex Chen", avatar: "AC" },
+  { id: 5, name: "John Smith", avatar: "JS" },
+  { id: 6, name: "Olivia Brown", avatar: "OB" },
+  { id: 7, name: "Liam Taylor", avatar: "LT" },
+  { id: 8, name: "Sophia Martinez", avatar: "SM" },
+  { id: 9, name: "James Anderson", avatar: "JA" },
+  { id: 10, name: "Isabella Thomas", avatar: "IT" },
+];
+
 const data: TaskColumn[] = [
   {
     id: 1,
@@ -35,7 +50,7 @@ const data: TaskColumn[] = [
         id: 1,
         title: "Research competitor analysis",
         priority: "medium",
-        assignees: [{ name: "Sarah Wilson", avatar: "SW" }],
+        assignees: [users[0], users[1]],
         dueDate: "2024-01-20",
         labels: ["Research"],
         description: "Analyze competitor features and pricing",
@@ -45,7 +60,7 @@ const data: TaskColumn[] = [
         id: 6,
         title: "Create component library",
         priority: "medium",
-        assignees: [{ name: "Mike Johnson", avatar: "MJ" }],
+        assignees: [users[4], users[2]],
         dueDate: "2024-01-19",
         labels: ["Development", "Frontend"],
         description: "Build reusable UI components",
@@ -63,7 +78,7 @@ const data: TaskColumn[] = [
         id: 2,
         title: "Define user personas",
         priority: "high",
-        assignees: [{ name: "Mike Johnson", avatar: "MJ" }],
+        assignees: [users[2]],
         dueDate: "2024-01-18",
         labels: ["UX"],
         description: "Create detailed user personas based on research",
@@ -73,7 +88,7 @@ const data: TaskColumn[] = [
         id: 7,
         title: "API documentation",
         priority: "low",
-        assignees: [{ name: "Emma Davis", avatar: "ED" }],
+        assignees: [users[1], users[3]],
         dueDate: "2024-01-14",
         labels: ["Documentation"],
         description: "Document all API endpoints and usage",
@@ -91,7 +106,7 @@ const data: TaskColumn[] = [
         id: 3,
         title: "Design homepage wireframes",
         priority: "high",
-        assignees: [{ name: "Emma Davis", avatar: "ED" }],
+        assignees: [users[0], users[5]],
         dueDate: "2024-01-16",
         labels: ["Design"],
         description: "Create wireframes for the new homepage layout",
@@ -101,10 +116,7 @@ const data: TaskColumn[] = [
         id: 8,
         title: "Project setup and planning",
         priority: "high",
-        assignees: [
-          { name: "Alex Chen", avatar: "AC" },
-          { name: "Emma Davis", avatar: "ED" },
-        ],
+        assignees: [users[4], users[7]],
         dueDate: "2024-01-10",
         labels: ["Planning"],
         description: "Initial project setup and milestone planning",
@@ -122,7 +134,7 @@ const data: TaskColumn[] = [
         id: 4,
         title: "Setup development environment",
         priority: "medium",
-        assignees: [{ name: "Alex Chen", avatar: "AC" }],
+        assignees: [users[8], users[9]],
         dueDate: "2024-01-17",
         labels: ["Development"],
         description: "Configure development tools and environment",
@@ -132,7 +144,7 @@ const data: TaskColumn[] = [
         id: 9,
         title: "Team onboarding",
         priority: "medium",
-        assignees: [{ name: "Sarah Wilson", avatar: "SW" }],
+        assignees: [users[6], users[3]],
         dueDate: "2024-01-12",
         labels: ["Management"],
         description: "Onboard team members and assign roles",
@@ -150,10 +162,7 @@ const data: TaskColumn[] = [
         id: 5,
         title: "Implement user authentication",
         priority: "high",
-        assignees: [
-          { name: "Sarah Wilson", avatar: "SW" },
-          { name: "Alex Chen", avatar: "AC" },
-        ],
+        assignees: [users[1], users[2], users[3]],
         dueDate: "2024-01-15",
         labels: ["Development", "Backend"],
         description: "Build secure user authentication system",
@@ -163,7 +172,46 @@ const data: TaskColumn[] = [
   },
 ];
 
+const defaultColumns: TaskColumn[] = [
+  {
+    id: 1,
+    title: "Backlog",
+    color: "#d1d5db",
+    score: 0,
+    tasks: [],
+  },
+  {
+    id: 2,
+    title: "To Do",
+    color: "#93c5fd",
+    score: 100,
+    tasks: [],
+  },
+  {
+    id: 3,
+    title: "In Progress",
+    color: "#fde047",
+    score: 300,
+    tasks: [],
+  },
+  {
+    id: 4,
+    title: "Review",
+    color: "#d8b4fe",
+    score: 500,
+    tasks: [],
+  },
+  {
+    id: 5,
+    title: "Done",
+    color: "#86efac",
+    score: 700,
+    tasks: [],
+  },
+];
+
 const IssuesBoardPage = () => {
+  const { mode } = useAppStore((state) => state);
   const { setInfos } = usePageInfos();
   useEffect(() => {
     setInfos({
@@ -172,13 +220,25 @@ const IssuesBoardPage = () => {
     });
   }, []);
 
-  const [columns, setColumns] = useState<TaskColumn[]>(data);
+  const [columns, setColumns] = useState<TaskColumn[]>(
+    mode === "personal" ? defaultColumns : data
+  );
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<{ columnId: number } | Task>({
     columnId: 0,
   });
+  const [editingColumn, setEditingColumn] = useState<
+    TaskColumn | { score: number }
+  >({
+    score: 0,
+  });
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
+
+  useEffect(() => {
+    setColumns(mode === "personal" ? defaultColumns : data);
+  }, [mode]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -259,11 +319,36 @@ const IssuesBoardPage = () => {
     if (task) setActiveTask(task);
   };
 
+  const getColumnScore = (columndId: number, position: "before" | "after") => {
+    const column = columns.find((col) => col.id === columndId);
+    const index = columns.findIndex((col) => col.id === columndId);
+
+    if (!column || !index) throw new Error("Column not found");
+
+    if (position === "before") {
+      if (index > 0) return (column.score + columns[index - 1].score) / 2;
+      return column.score - 200;
+    } else {
+      if (index < columns.length - 1) {
+        return (column.score + columns[index + 1].score) / 2;
+      }
+      return column.score + 200;
+    }
+  };
+
   return (
     <div className="space-y-6 overflow-auto">
       {/* Header */}
       <div className="flex justify-end items-center">
-        <Button variant="outline">
+        <Button
+          onClick={() => {
+            setEditingColumn({
+              score: columns[columns.length - 1].score + 200,
+            });
+            setIsColumnModalOpen(true);
+          }}
+          variant="outline"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Add Column
         </Button>
@@ -284,6 +369,15 @@ const IssuesBoardPage = () => {
                 items={column.tasks.map((t) => t.id)}
               >
                 <Column
+                  onEdit={() => {
+                    setEditingColumn(column);
+                    setIsColumnModalOpen(true);
+                  }}
+                  onDelete={() => {
+                    setColumns((prev) =>
+                      prev.filter((col) => col.id !== column.id)
+                    );
+                  }}
                   key={column.id}
                   column={column}
                   columns={columns}
@@ -328,6 +422,24 @@ const IssuesBoardPage = () => {
                       setEditingTask(task);
                       setIsTaskModalOpen(true);
                     },
+                    onDelete: (taskId) => {
+                      setColumns((prev) =>
+                        prev.map((col) => ({
+                          ...col,
+                          tasks: col.tasks.filter((t) => t.id !== taskId),
+                        }))
+                      );
+                    },
+                    onAdd: () => {
+                      setEditingTask({ columnId: column.id });
+                      setIsTaskModalOpen(true);
+                    },
+                  }}
+                  onAdd={(position) => {
+                    setEditingColumn({
+                      score: getColumnScore(column.id, position),
+                    });
+                    setIsColumnModalOpen(true);
                   }}
                 />
               </SortableContext>
@@ -350,68 +462,76 @@ const IssuesBoardPage = () => {
       </DndContext>
 
       <TaskModal
+        users={columns.flatMap((col) =>
+          col.tasks.flatMap((task) => task.assignees)
+        )}
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
         task={editingTask}
         onSave={(task) => {
-          if (columns.some((col) => col.id === task.columnId)) {
+          const actualTask: Task = {
+            ...task,
+            assignees: task.assignees.map(
+              (a) => users.find((u) => u.id === a)!
+            ),
+          };
+          if (columns.some((col) => col.id === actualTask.columnId)) {
             setColumns((prev) =>
               prev.map((col) =>
-                col.id === task.columnId
+                col.id === actualTask.columnId
                   ? {
                       ...col,
                       tasks: col.tasks.some((t) => t.id === task.id)
-                        ? col.tasks.map((t) => (t.id === task.id ? task : t))
-                        : [...col.tasks, task],
+                        ? col.tasks.map((t) =>
+                            t.id === actualTask.id ? actualTask : t
+                          )
+                        : [...col.tasks, actualTask],
                     }
                   : col
               )
             );
           } else {
-            setColumns((prev) => [
-              ...prev,
-              {
-                id: task.columnId,
-                title: `Column ${task.columnId}`,
-                color: "#d1d5db",
-                score: 0,
-                tasks: [task],
-              },
-            ]);
+            setColumns((prev) => {
+              return prev.map((col, index) => {
+                if (index === 0) {
+                  return {
+                    ...col,
+                    tasks: [...col.tasks, actualTask],
+                  };
+                }
+                return col;
+              });
+            });
           }
-        }}
-      />
 
-      {/* <TaskModal
-        isOpen={isNewTaskModalOpen}
-        onClose={() => setIsNewTaskModalOpen(false)}
-        onSave={(task) => handleAddTask(task, newTaskColumnId!)}
+          setIsTaskModalOpen(false);
+          setEditingTask({ columnId: 0 });
+        }}
       />
 
       <TasksColumnModal
         isOpen={isColumnModalOpen}
         onClose={() => setIsColumnModalOpen(false)}
         onSubmit={(column) => {
-          // if (columns.some((col) => col.id === column.id)) {
-          //   setColumns((prev: TaskColumn[]) =>
-          //     prev.map((col: TaskColumn) =>
-          //       col.id === column.id ? column : col
-          //     )
-          //   );
-          //   alert("Yes");
-          // } else {
-          //   // setColumns((prev: TaskColumn[]) =>
-          //   //   [...prev, column].sort((a, b) => a.score - b.score)
-          //   // );
-          //   alert("No");
-          // }
-
           console.log(column);
-
+          setColumns((prev) => {
+            const existingColumn = prev.find((col) => col.id === column.id);
+            if (existingColumn) {
+              return prev
+                .map((col) =>
+                  col.id === column.id ? { ...col, ...column } : col
+                )
+                .sort((a, b) => a.score - b.score);
+            }
+            return [...prev, { ...column, tasks: [] }].sort(
+              (a, b) => a.score - b.score
+            );
+          });
           setEditingColumn({ score: 0 });
+          setIsColumnModalOpen(false);
         }}
         column={editingColumn}
-      /> */}
+      />
     </div>
   );
 };

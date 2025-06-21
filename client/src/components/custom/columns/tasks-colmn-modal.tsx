@@ -8,8 +8,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TaskColumn } from "@/types";
+import { useState } from "react";
 import { AjaxForm } from "../forms/ajax-form";
 import { FormField } from "../forms/form-field";
+import { LoaderButton } from "../loader-button";
 
 export interface TasksColumnModalProps {
   isOpen: boolean;
@@ -24,16 +26,19 @@ export const TasksColumnModal = ({
   onSubmit,
   column,
 }: TasksColumnModalProps) => {
-  const handleSubmit = (formData: FormData) => {
-    const newColumn: TaskColumn = {
-      ...column,
-      id: Date.now(),
-      title: formData.get("title") as string,
-      color: formData.get("color") as string,
-    };
-    onSubmit(newColumn);
-    onClose();
-  };
+  // const handleSubmit = (formData: FormData) => {
+  //   const actualColumn: TaskColumn = {
+  //     ...column,
+  //     id: "id" in column ? column.id : Date.now(),
+  //     title: formData.get("title") as string,
+  //     color: formData.get("color") as string,
+  //     tasks: "tasks" in column ? column.tasks : [],
+  //   };
+  //   onSubmit(actualColumn);
+  //   onClose();
+  // };
+
+  const [pending, setPending] = useState(false);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -46,20 +51,25 @@ export const TasksColumnModal = ({
         </DialogHeader>
 
         <AjaxForm<TaskColumn>
-          onResponse={(response) => {
-            console.log(response);
-            onSubmit(response);
+          onResponse={(col) => {
+            column = {
+              ...col,
+              id: "id" in column ? column.id : Date.now(),
+            };
+            console.log("Column created/updated:", column);
+            onSubmit(column);
+            onClose();
           }}
-          onRequestError={(error) => {
-            console.error("Error submitting form:", error.data);
-          }}
-          mutateData={(data) => ({
-            ...data,
-            score: column.score,
-            id: "id" in column ? column.id : undefined,
-          })}
+          onRequestError={(error) => console.error(error.data)}
           action={"/columns"}
           className="space-y-4"
+          mutateData={(data) => {
+            return {
+              ...data,
+              score: column.score,
+            };
+          }}
+          duringLoading={setPending}
         >
           <div className="space-y-4">
             <FormField
@@ -78,7 +88,9 @@ export const TasksColumnModal = ({
             <Button onClick={onClose} type="button" variant="outline">
               Cancel
             </Button>
-            <Button>Create Column</Button>
+            <LoaderButton loading={pending}>
+              {"id" in column ? "Save Changes" : "Create Column"}
+            </LoaderButton>
           </DialogFooter>
         </AjaxForm>
       </DialogContent>

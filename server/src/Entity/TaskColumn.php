@@ -38,6 +38,9 @@ class TaskColumn
     #[Assert\Type(type: 'float', message: "The score must be a valid number.")]
     private ?float $score = null;
 
+    #[ORM\ManyToOne]
+    private ?User $owner = null;
+
     public function __construct()
     {
         $this->tasks = new ArrayCollection();
@@ -110,6 +113,18 @@ class TaskColumn
     public function setScore(float $score): static
     {
         $this->score = $score;
+
+        return $this;
+    }
+
+    public function getOwner(): ?User
+    {
+        return $this->owner;
+    }
+
+    public function setOwner(?User $owner): static
+    {
+        $this->owner = $owner;
 
         return $this;
     }

@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 import { useFlashMessages } from "@/lib/flash-messages";
+import { useAppStore } from "@/store/store-provider";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -14,6 +15,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { status, authenticate, setLastRequestedUrl } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { switchSidebarState, sidebarState } = useAppStore((state) => state);
 
   useFlashMessages();
   useEffect(() => {
@@ -37,7 +39,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        <SidebarProvider>
+        <SidebarProvider
+          open={sidebarState === "open"}
+          onOpenChange={switchSidebarState}
+        >
           <SidebarLeft />
           <SidebarInset>
             <AppContent>{children}</AppContent>
