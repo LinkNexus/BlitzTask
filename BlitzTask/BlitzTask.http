@@ -1,0 +1,14 @@
+@BlitzTask_HostAddress = http://localhost:5209
+
+POST {{BlitzTask_HostAddress}}/api/login
+Content-Type: application/json
+
+{
+  "Email": "user@example.",
+  "Password": "Password123!"
+}
+
+###
+
+GET {{BlitzTask_HostAddress}}/api/me
+Content-Type: application/json
