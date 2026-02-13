@@ -1,6 +1,6 @@
 using BlitzTask.Features.Auth;
+using BlitzTask.Infrastructure.Auth;
 using BlitzTask.Infrastructure.Data;
-using BlitzTask.Infrastructure.Models;
 using BlitzTask.Infrastructure.Notifications;
 using BlitzTask.Infrastructure.Services;
 using FluentValidation;
@@ -21,7 +21,6 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Register HttpContextAccessor for accessing HttpContext in services
         builder.Services.AddHttpContextAccessor();
 
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -62,7 +61,6 @@ public class Program
             builder.Services.AddScoped<IMailerService, ResendMailerService>();
         }
 
-        // Register notification system
         builder.Services.AddNotifications();
 
         builder.Services.AddAntiforgery(options =>
@@ -70,7 +68,6 @@ public class Program
             options.HeaderName = "X-CSRF-TOKEN";
         });
 
-        // Configure Hangfire with PostgreSQL storage
         builder.Services.AddHangfire(configuration =>
             configuration
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
@@ -96,23 +93,7 @@ public class Program
             {
                 options.Cookie.SameSite = SameSiteMode.Strict;
 
-                options.Events.OnRedirectToLogin = context =>
-                {
-                    context.Response.StatusCode = 401;
-                    return context.Response.WriteAsJsonAsync(
-                        new ApiMessageResponse(
-                            "Unauthorized access to this resource, please login first"
-                        )
-                    );
-                };
-
-                options.Events.OnRedirectToAccessDenied = context =>
-                {
-                    context.Response.StatusCode = 403;
-                    return context.Response.WriteAsJsonAsync(
-                        new ApiMessageResponse("You do not have permission to access this resource")
-                    );
-                };
+                options.Events = new CustomCookieAuthenticationEvents();
             });
 
         builder.Services.AddAuthorization();

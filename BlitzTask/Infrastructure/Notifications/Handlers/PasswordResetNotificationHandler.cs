@@ -1,44 +1,46 @@
+using System;
 using System.Net;
 using BlitzTask.Features.Auth;
 using BlitzTask.Infrastructure.Data;
 using BlitzTask.Infrastructure.Jobs;
 using Hangfire;
-using Microsoft.AspNetCore.Identity;
 
 namespace BlitzTask.Infrastructure.Notifications.Handlers;
 
-/// <summary>
-/// Handles ConfirmEmailNotification by queuing a background job to send the confirmation email
-/// </summary>
-public class ConfirmEmailNotificationHandler(
-    ApplicationDbContext dbContext,
+public class PasswordResetNotificationHandler(
     IHttpContextAccessor httpContextAccessor,
-    IBackgroundJobClient backgroundJobClient
-) : INotificationHandler<ConfirmEmailNotification>
+    IBackgroundJobClient backgroundJobClient,
+    ApplicationDbContext dbContext
+) : INotificationHandler<PasswordResetNotification>
 {
     public async Task HandleAsync(
-        ConfirmEmailNotification notification,
+        PasswordResetNotification notification,
         CancellationToken cancellationToken = default
     )
     {
+        var user = dbContext.Users.FirstOrDefault(u => u.Email == notification.Email);
+
+        if (user is null)
+            return;
+
         var token = dbContext.UserTokens.FirstOrDefault(t =>
-            t.UserId == notification.User.Id && t.TokenType == UserTokenType.EmailConfirmation
+            t.UserId == user.Id && t.TokenType == UserTokenType.PasswordReset
         );
 
         if (token is null)
         {
             token = new UserToken
             {
-                User = notification.User,
+                User = user,
                 Token = Guid.NewGuid().ToString(),
-                TokenType = UserTokenType.EmailConfirmation,
-                ExpiresAt = DateTime.UtcNow.AddHours(24),
+                TokenType = UserTokenType.PasswordReset,
+                ExpiresAt = DateTime.UtcNow.AddHours(1),
             };
         }
         else
         {
             token.Token = Guid.NewGuid().ToString();
-            token.ExpiresAt = DateTime.UtcNow.AddHours(24);
+            token.ExpiresAt = DateTime.UtcNow.AddHours(1);
         }
 
         if (token.Id == 0)
@@ -50,15 +52,11 @@ public class ConfirmEmailNotificationHandler(
             ?? throw new InvalidOperationException("HttpContext is not available");
 
         var encodedToken = WebUtility.UrlEncode(token.Token);
-        var confirmationLink =
-            $"{context.Request.Scheme}://{context.Request.Host}/confirm-email?token={encodedToken}&userId={notification.User.Id}";
+        var resetLink =
+            $"{context.Request.Scheme}://{context.Request.Host}/reset-password?token={encodedToken}&userId={user.Id}";
 
         backgroundJobClient.Enqueue<EmailJobs>(x =>
-            x.SendEmailConfirmation(
-                notification.User.Email!,
-                notification.User.Name!,
-                confirmationLink
-            )
+            x.SendPasswordResetEmail(notification.Email, resetLink)
         );
     }
 }

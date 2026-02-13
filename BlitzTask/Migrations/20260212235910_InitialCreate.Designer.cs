@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BlitzTask.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260212215751_InitialCreate")]
+    [Migration("20260212235910_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -24,32 +24,6 @@ namespace BlitzTask.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("BlitzTask.Features.Auth.EmailConfirmationToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("EmailConfirmationTokens");
-                });
 
             modelBuilder.Entity("BlitzTask.Features.Auth.User", b =>
                 {
@@ -92,11 +66,39 @@ namespace BlitzTask.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("BlitzTask.Features.Auth.EmailConfirmationToken", b =>
+            modelBuilder.Entity("BlitzTask.Features.Auth.UserToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TokenType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserTokens");
+                });
+
+            modelBuilder.Entity("BlitzTask.Features.Auth.UserToken", b =>
                 {
                     b.HasOne("BlitzTask.Features.Auth.User", "User")
-                        .WithOne("EmailConfirmationToken")
-                        .HasForeignKey("BlitzTask.Features.Auth.EmailConfirmationToken", "UserId")
+                        .WithMany("Tokens")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -105,7 +107,7 @@ namespace BlitzTask.Migrations
 
             modelBuilder.Entity("BlitzTask.Features.Auth.User", b =>
                 {
-                    b.Navigation("EmailConfirmationToken");
+                    b.Navigation("Tokens");
                 });
 #pragma warning restore 612, 618
         }

@@ -3,16 +3,8 @@ using BlitzTask.Infrastructure.Services;
 
 namespace BlitzTask.Infrastructure.Jobs;
 
-/// <summary>
-/// Background jobs for sending emails via Hangfire
-/// These methods are called by Hangfire workers
-/// </summary>
 public class EmailJobs(IMailerService mailerService, ILogger<EmailJobs> logger)
 {
-    /// <summary>
-    /// Send a password reset email
-    /// Usage: BackgroundJob.Enqueue<EmailJobs>(x => x.SendPasswordResetEmail(email, resetLink));
-    /// </summary>
     public async Task SendPasswordResetEmail(string email, string resetLink)
     {
         logger.LogInformation("Sending password reset email to {Email}", email);
@@ -23,7 +15,12 @@ public class EmailJobs(IMailerService mailerService, ILogger<EmailJobs> logger)
                 new EmailMessage(
                     To: [email],
                     Subject: "Reset Your Password",
-                    HtmlBody: $"<p>Click the link below to reset your password:</p><a href=\"{resetLink}\">Reset Password</a>"
+                    TemplateName: "PasswordReset",
+                    TemplateModel: new PasswordResetModel
+                    {
+                        UserName = email,
+                        ResetLink = resetLink,
+                    }
                 )
             );
 
@@ -32,14 +29,10 @@ public class EmailJobs(IMailerService mailerService, ILogger<EmailJobs> logger)
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to send password reset email to {Email}", email);
-            throw; // Hangfire will retry on failure
+            throw;
         }
     }
 
-    /// <summary>
-    /// Send email confirmation with template
-    /// Usage: BackgroundJob.Enqueue<EmailJobs>(x => x.SendEmailConfirmation(email, userName, confirmationLink));
-    /// </summary>
     public async Task SendEmailConfirmation(string email, string userName, string confirmationLink)
     {
         logger.LogInformation("Sending email confirmation to {Email}", email);
@@ -54,7 +47,7 @@ public class EmailJobs(IMailerService mailerService, ILogger<EmailJobs> logger)
                     TemplateModel: new ConfirmEmailModel
                     {
                         UserName = userName,
-                        ConfirmationLink = confirmationLink
+                        ConfirmationLink = confirmationLink,
                     }
                 )
             );
@@ -64,7 +57,7 @@ public class EmailJobs(IMailerService mailerService, ILogger<EmailJobs> logger)
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to send email confirmation to {Email}", email);
-            throw; // Hangfire will retry on failure
+            throw;
         }
     }
 }

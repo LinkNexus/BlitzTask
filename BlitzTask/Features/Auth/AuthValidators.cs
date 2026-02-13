@@ -56,3 +56,35 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
             .WithMessage("Passwords do not match");
     }
 }
+
+public class RequestPasswordResetRequestValidator : AbstractValidator<RequestPasswordResetRequest>
+{
+    public RequestPasswordResetRequestValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+    }
+}
+
+public class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequest>
+{
+    public ResetPasswordRequestValidator()
+    {
+        RuleFor(x => x.NewPassword)
+            .NotEmpty()
+            .MinimumLength(8)
+            .MaximumLength(128)
+            .Matches("[A-Z]")
+            .WithMessage("Password must contain at least one uppercase letter")
+            .Matches("[a-z]")
+            .WithMessage("Password must contain at least one lowercase letter")
+            .Matches("[0-9]")
+            .WithMessage("Password must contain at least one digit")
+            .Matches("[^a-zA-Z0-9]")
+            .WithMessage("Password must contain at least one special character");
+
+        RuleFor(x => x.ConfirmPassword)
+            .NotEmpty()
+            .Equal(x => x.NewPassword)
+            .WithMessage("Passwords do not match");
+    }
+}

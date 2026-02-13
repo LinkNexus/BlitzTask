@@ -2,6 +2,12 @@ using BlitzTask.Infrastructure.Data.Interfaces;
 
 namespace BlitzTask.Features.Auth;
 
+public enum UserTokenType
+{
+    EmailConfirmation,
+    PasswordReset,
+}
+
 public class User : IAuditable
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -11,14 +17,16 @@ public class User : IAuditable
     public bool EmailConfirmed { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    public EmailConfirmationToken? EmailConfirmationToken { get; set; }
+
+    public ICollection<UserToken> Tokens { get; set; } = [];
 }
 
-public class EmailConfirmationToken
+public class UserToken
 {
     public int Id { get; set; }
     public Guid UserId { get; set; }
     public string Token { get; set; } = string.Empty;
+    public UserTokenType TokenType { get; set; }
     public DateTime ExpiresAt { get; set; }
 
     public User User { get; set; } = null!;
@@ -39,8 +47,23 @@ public record CreateUserRequest(string Name, string Email, string Password, stri
 
 public record ConfirmEmailRequest(Guid UserId, string Token);
 
+public record RequestPasswordResetRequest(string Email);
+
+public record ResetPasswordRequest(
+    Guid UserId,
+    string Token,
+    string NewPassword,
+    string ConfirmPassword
+);
+
 public class ConfirmEmailModel
 {
     public required string UserName { get; set; }
     public required string ConfirmationLink { get; set; }
+}
+
+public class PasswordResetModel
+{
+    public required string UserName { get; set; }
+    public required string ResetLink { get; set; }
 }

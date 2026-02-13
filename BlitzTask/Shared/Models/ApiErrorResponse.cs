@@ -1,5 +1,5 @@
 using System;
 
-namespace BlitzTask.Infrastructure.Models;
+namespace BlitzTask.Shared.Models;
 
 public record ApiMessageResponse(string Message);

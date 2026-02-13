@@ -1,9 +1,10 @@
 using System.Net;
 using System.Security.Claims;
 using BlitzTask.Infrastructure.Data;
+using BlitzTask.Infrastructure.Extensions;
 using BlitzTask.Infrastructure.Filters;
-using BlitzTask.Infrastructure.Models;
 using BlitzTask.Infrastructure.Notifications;
+using BlitzTask.Shared.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -33,7 +34,8 @@ public static class AuthEndpoints
             .MapGet("/me", GetCurrentUser)
             .WithName("get-current-user")
             .RequireAuthorization()
-            .Produces(StatusCodes.Status401Unauthorized);
+            .Produces<CurrentUser>()
+            .Produces<ApiMessageResponse>(StatusCodes.Status401Unauthorized);
 
         authGroup
             .MapPost("/create-account", CreateAccount)
@@ -55,6 +57,20 @@ public static class AuthEndpoints
             .MapPost("/resend-confirm-email", ResendConfirmEmail)
             .WithName("resend-confirm-email")
             .RequireAuthorization();
+
+        authGroup
+            .MapPost("/request-password-reset", RequestPasswordReset)
+            .WithName("request-password-reset")
+            .AddEndpointFilter<ValidationFilter<RequestPasswordResetRequest>>()
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity);
+
+        authGroup
+            .MapPost("/reset-password", ResetPassword)
+            .WithName("reset-password")
+            .AddEndpointFilter<ValidationFilter<ResetPasswordRequest>>()
+            .Produces<ApiMessageResponse>(StatusCodes.Status200OK)
+            .Produces<ApiMessageResponse>(StatusCodes.Status400BadRequest)
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity);
 
         return app;
     }
@@ -111,29 +127,22 @@ public static class AuthEndpoints
         return TypedResults.NoContent();
     }
 
-    private static async Task<Ok<CurrentUser>> GetCurrentUser(
+    private static async Task<IResult> GetCurrentUser(
         HttpContext httpContext,
         ApplicationDbContext dbContext
     )
     {
-        var userIdClaim = httpContext.User.Claims.FirstOrDefault(c =>
-            c.Type == ClaimTypes.NameIdentifier
-        );
+        var user = httpContext.GetUser();
 
-        var userId = Guid.Parse(userIdClaim!.Value);
-        var user = await dbContext
-            .Users.Where(u => u.Id == userId)
-            .Select(u => new CurrentUser(
-                Id: u.Id,
-                Email: u.Email,
-                Name: u.Name,
-                CreatedAt: u.CreatedAt,
-                UpdatedAt: u.UpdatedAt,
-                EmailConfirmed: u.EmailConfirmed
-            ))
-            .FirstOrDefaultAsync();
+        if (user is null)
+        {
+            return Results.Json(
+                new ApiMessageResponse("Unauthrized access, please login to access this resource"),
+                statusCode: StatusCodes.Status401Unauthorized
+            );
+        }
 
-        return TypedResults.Ok(user!);
+        return Results.Ok(user.ToCurrentUser());
     }
 
     private static async Task<IResult> CreateAccount(
@@ -182,8 +191,11 @@ public static class AuthEndpoints
         if (user.EmailConfirmed)
             return Results.BadRequest(new ApiMessageResponse("Email is already confirmed"));
 
-        var token = await dbContext.EmailConfirmationTokens.FirstOrDefaultAsync(t =>
-            t.UserId == user.Id && t.Token == request.Token && t.ExpiresAt > DateTime.UtcNow
+        var token = await dbContext.UserTokens.FirstOrDefaultAsync(t =>
+            t.UserId == user.Id
+            && t.TokenType == UserTokenType.EmailConfirmation
+            && t.Token == request.Token
+            && t.ExpiresAt > DateTime.UtcNow
         );
 
         if (token is null)
@@ -194,7 +206,7 @@ public static class AuthEndpoints
             );
 
         user.EmailConfirmed = true;
-        dbContext.EmailConfirmationTokens.Remove(token);
+        dbContext.UserTokens.Remove(token);
         await dbContext.SaveChangesAsync();
         return Results.Ok(new ApiMessageResponse("Your email has been successfully confirmed"));
     }
@@ -205,11 +217,7 @@ public static class AuthEndpoints
         ApplicationDbContext dbContext
     )
     {
-        var userIdClaim = context.User.Claims.FirstOrDefault(c =>
-            c.Type == ClaimTypes.NameIdentifier
-        );
-        var userId = Guid.Parse(userIdClaim!.Value);
-        var user = await dbContext.Users.FindAsync(userId);
+        var user = context.GetUser();
 
         if (user!.EmailConfirmed)
             return TypedResults.Ok(new ApiMessageResponse("Your email is already confirmed"));
@@ -219,5 +227,56 @@ public static class AuthEndpoints
         return TypedResults.Ok(
             new ApiMessageResponse("A new confirmation email has been sent to your email address")
         );
+    }
+
+    private static async Task<Ok<ApiMessageResponse>> RequestPasswordReset(
+        RequestPasswordResetRequest request,
+        ApplicationDbContext dbContext,
+        INotificationPublisher publisher
+    )
+    {
+        await publisher.PublishAsync(new PasswordResetNotification(request.Email));
+
+        return TypedResults.Ok(
+            new ApiMessageResponse(
+                "If an account with that email exists, a password reset link has been sent"
+            )
+        );
+    }
+
+    private static async Task<IResult> ResetPassword(
+        ResetPasswordRequest request,
+        ApplicationDbContext dbContext
+    )
+    {
+        var user = await dbContext.Users.FindAsync(request.UserId);
+        if (user is null)
+            return Results.NotFound(
+                new ApiMessageResponse(
+                    "The user associated with this password reset token was not found"
+                )
+            );
+
+        var token = await dbContext.UserTokens.FirstOrDefaultAsync(t =>
+            t.UserId == user.Id
+            && t.TokenType == UserTokenType.PasswordReset
+            && t.Token == request.Token
+            && t.ExpiresAt > DateTime.UtcNow
+        );
+
+        if (token is null)
+            return Results.BadRequest(
+                new ApiMessageResponse(
+                    "The password reset token is invalid or has expired, please request a new password reset email"
+                )
+            );
+
+        var passwordHasher = new PasswordHasher<User>();
+        user.HashedPassword = passwordHasher.HashPassword(user, request.NewPassword);
+
+        dbContext.UserTokens.Remove(token);
+        await dbContext.SaveChangesAsync();
+
+        return Results.Ok(new ApiMessageResponse("Your password has been successfully reset"));
     }
 }

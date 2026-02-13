@@ -13,6 +13,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
+import { Route as AuthRequestResetPasswordRouteImport } from './routes/_auth/request-reset-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthCreateAccountRouteImport } from './routes/_auth/create-account'
 import { Route as AuthConfirmEmailRouteImport } from './routes/_auth/confirm-email'
@@ -36,6 +38,17 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthRequestResetPasswordRoute =
+  AuthRequestResetPasswordRouteImport.update({
+    id: '/request-reset-password',
+    path: '/request-reset-password',
+    getParentRoute: () => AuthRouteRoute,
+  } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -63,6 +76,8 @@ export interface FileRoutesByFullPath {
   '/confirm-email': typeof AuthConfirmEmailRoute
   '/create-account': typeof AuthCreateAccountRoute
   '/login': typeof AuthLoginRoute
+  '/request-reset-password': typeof AuthRequestResetPasswordRoute
+  '/reset-password': typeof AuthResetPasswordRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects/create': typeof AuthenticatedProjectsCreateRoute
 }
@@ -71,6 +86,8 @@ export interface FileRoutesByTo {
   '/confirm-email': typeof AuthConfirmEmailRoute
   '/create-account': typeof AuthCreateAccountRoute
   '/login': typeof AuthLoginRoute
+  '/request-reset-password': typeof AuthRequestResetPasswordRoute
+  '/reset-password': typeof AuthResetPasswordRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects/create': typeof AuthenticatedProjectsCreateRoute
 }
@@ -82,6 +99,8 @@ export interface FileRoutesById {
   '/_auth/confirm-email': typeof AuthConfirmEmailRoute
   '/_auth/create-account': typeof AuthCreateAccountRoute
   '/_auth/login': typeof AuthLoginRoute
+  '/_auth/request-reset-password': typeof AuthRequestResetPasswordRoute
+  '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/projects/create': typeof AuthenticatedProjectsCreateRoute
 }
@@ -92,6 +111,8 @@ export interface FileRouteTypes {
     | '/confirm-email'
     | '/create-account'
     | '/login'
+    | '/request-reset-password'
+    | '/reset-password'
     | '/dashboard'
     | '/projects/create'
   fileRoutesByTo: FileRoutesByTo
@@ -100,6 +121,8 @@ export interface FileRouteTypes {
     | '/confirm-email'
     | '/create-account'
     | '/login'
+    | '/request-reset-password'
+    | '/reset-password'
     | '/dashboard'
     | '/projects/create'
   id:
@@ -110,6 +133,8 @@ export interface FileRouteTypes {
     | '/_auth/confirm-email'
     | '/_auth/create-account'
     | '/_auth/login'
+    | '/_auth/request-reset-password'
+    | '/_auth/reset-password'
     | '/_authenticated/dashboard'
     | '/_authenticated/projects/create'
   fileRoutesById: FileRoutesById
@@ -150,6 +175,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_auth/reset-password': {
+      id: '/_auth/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/_auth/request-reset-password': {
+      id: '/_auth/request-reset-password'
+      path: '/request-reset-password'
+      fullPath: '/request-reset-password'
+      preLoaderRoute: typeof AuthRequestResetPasswordRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
     '/_auth/login': {
       id: '/_auth/login'
       path: '/login'
@@ -185,12 +224,16 @@ interface AuthRouteRouteChildren {
   AuthConfirmEmailRoute: typeof AuthConfirmEmailRoute
   AuthCreateAccountRoute: typeof AuthCreateAccountRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthRequestResetPasswordRoute: typeof AuthRequestResetPasswordRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
   AuthConfirmEmailRoute: AuthConfirmEmailRoute,
   AuthCreateAccountRoute: AuthCreateAccountRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthRequestResetPasswordRoute: AuthRequestResetPasswordRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
 }
 
 const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
