@@ -1,4 +1,5 @@
 using BlitzTask.Features.Auth;
+using BlitzTask.Features.Projects;
 using BlitzTask.Infrastructure.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<UserToken> UserTokens => Set<UserToken>();
+    public DbSet<Project> Projects => Set<Project>();
+    public DbSet<ProjectParticipant> ProjectParticipants => Set<ProjectParticipant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

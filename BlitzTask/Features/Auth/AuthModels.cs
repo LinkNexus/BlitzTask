@@ -1,3 +1,4 @@
+using BlitzTask.Features.Projects;
 using BlitzTask.Infrastructure.Data.Interfaces;
 
 namespace BlitzTask.Features.Auth;
@@ -18,7 +19,9 @@ public class User : IAuditable
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    public ICollection<UserToken> Tokens { get; set; } = [];
+    public List<UserToken> Tokens { get; set; } = [];
+
+    public List<ProjectParticipant> ProjectParticipations { get; set; } = [];
 }
 
 public class UserToken

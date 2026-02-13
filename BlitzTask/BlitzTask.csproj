@@ -33,6 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Features/Projects/" />
     <Folder Include="Infrastructure/Auth/" />
     <Folder Include="Infrastructure/Data/Interfaces/" />
     <Folder Include="Infrastructure/Extensions/" />
