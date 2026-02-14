@@ -2,6 +2,7 @@ using System;
 using BlitzTask.Infrastructure.Data;
 using BlitzTask.Infrastructure.Extensions;
 using BlitzTask.Infrastructure.Filters;
+using BlitzTask.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlitzTask.Features.Projects;
@@ -10,7 +11,10 @@ public static class ProjectsEndpoints
 {
     public static IEndpointRouteBuilder MapProjectsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/projects").WithTags("Projects").RequireAuthorization();
+        var group = app
+            .MapGroup("/api/projects")
+            .WithTags("Projects")
+            .RequireAuthorization("EmailConfirmed");
 
         // group.MapGet("/", GetProjects);
         group
@@ -18,6 +22,7 @@ public static class ProjectsEndpoints
             .WithName("create-project")
             .AddEndpointFilter<ValidationFilter<CreateProjectRequest>>()
             .Produces<Project>(StatusCodes.Status201Created)
+            .Produces<ApiMessageResponse>(StatusCodes.Status403Forbidden)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity);
 
         return app;

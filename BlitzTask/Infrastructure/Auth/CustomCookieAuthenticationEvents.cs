@@ -47,7 +47,22 @@ public class CustomCookieAuthenticationEvents : CookieAuthenticationEvents
     )
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
-        return context.Response.WriteAsJsonAsync(
+
+        // Check if this is due to email not being confirmed
+        if (
+            context.HttpContext.Items.TryGetValue("CurrentUser", out var userObj)
+            && userObj is User user
+            && !user.EmailConfirmed
+        )
+        {
+            return context.HttpContext.Response.WriteAsJsonAsync(
+                new ApiMessageResponse(
+                    "Please confirm your email address to access this resource. Check your inbox for the confirmation email or request a new one."
+                )
+            );
+        }
+
+        return context.HttpContext.Response.WriteAsJsonAsync(
             new ApiMessageResponse("You do not have permission to access this resource")
         );
     }

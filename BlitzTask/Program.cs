@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using BlitzTask.Features.Auth;
+using BlitzTask.Features.Projects;
 using BlitzTask.Infrastructure.Auth;
 using BlitzTask.Infrastructure.Data;
 using BlitzTask.Infrastructure.Notifications;
@@ -8,6 +9,7 @@ using FluentValidation;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -98,7 +100,15 @@ public class Program
                 options.Events = new CustomCookieAuthenticationEvents();
             });
 
-        builder.Services.AddAuthorization();
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy(
+                "EmailConfirmed",
+                policy => policy.Requirements.Add(new EmailConfirmedRequirement())
+            );
+        });
+
+        builder.Services.AddSingleton<IAuthorizationHandler, EmailConfirmedHandler>();
 
         // Configure rate limiting
         builder.Services.AddRateLimiter(options =>
@@ -196,7 +206,9 @@ public class Program
         app.UseAuthorization();
         app.UseAntiforgery();
 
-        app.MapAuthEndpoints().MapFallbackToFile("index.html");
+        app.MapAuthEndpoints();
+        app.MapProjectsEndpoints();
+        app.MapFallbackToFile("index.html");
 
         app.Run();
     }
