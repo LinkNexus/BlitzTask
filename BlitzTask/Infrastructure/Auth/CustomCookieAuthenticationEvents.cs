@@ -16,6 +16,7 @@ public class CustomCookieAuthenticationEvents : CookieAuthenticationEvents
             context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
 
         var userIdClaim = context.Principal?.FindFirst(ClaimTypes.NameIdentifier);
+        var securityStampClaim = context.Principal?.FindFirst("SecurityStamp");
 
         if (userIdClaim is null || !Guid.TryParse(userIdClaim.Value, out var userId))
         {
@@ -28,6 +29,14 @@ public class CustomCookieAuthenticationEvents : CookieAuthenticationEvents
         if (user is null)
         {
             context.RejectPrincipal();
+            return;
+        }
+
+        // Validate SecurityStamp - if it doesn't match, the session is invalid
+        if (securityStampClaim is null || securityStampClaim.Value != user.SecurityStamp)
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return;
         }
 

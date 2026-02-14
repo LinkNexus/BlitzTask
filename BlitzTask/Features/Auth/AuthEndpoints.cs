@@ -33,6 +33,13 @@ public static class AuthEndpoints
         authGroup.MapPost("/logout", (Delegate)Logout).WithName("logout");
 
         authGroup
+            .MapPost("/logout-all", LogoutAll)
+            .WithName("logout-all")
+            .RequireAuthorization()
+            .Produces<ApiMessageResponse>(StatusCodes.Status200OK)
+            .Produces<ApiMessageResponse>(StatusCodes.Status401Unauthorized);
+
+        authGroup
             .MapGet("/me", GetCurrentUser)
             .WithName("get-current-user")
             .RequireAuthorization()
@@ -110,6 +117,7 @@ public static class AuthEndpoints
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.Name),
             new(ClaimTypes.Email, user.Email),
+            new("SecurityStamp", user.SecurityStamp),
         };
 
         var claimsIdentity = new ClaimsIdentity(
@@ -135,6 +143,27 @@ public static class AuthEndpoints
     {
         await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return TypedResults.NoContent();
+    }
+
+    private static async Task<IResult> LogoutAll(
+        HttpContext httpContext,
+        ApplicationDbContext dbContext
+    )
+    {
+        var user = httpContext.GetUser();
+
+        // Regenerate SecurityStamp to invalidate all sessions across all devices
+        user.SecurityStamp = Guid.NewGuid().ToString();
+        await dbContext.SaveChangesAsync();
+
+        // Sign out the current session
+        await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+        return Results.Ok(
+            new ApiMessageResponse(
+                "You have been logged out from all devices. Please login again to continue."
+            )
+        );
     }
 
     private static async Task<IResult> GetCurrentUser(
@@ -283,6 +312,8 @@ public static class AuthEndpoints
 
         var passwordHasher = new PasswordHasher<User>();
         user.HashedPassword = passwordHasher.HashPassword(user, request.NewPassword);
+
+        user.SecurityStamp = Guid.NewGuid().ToString();
 
         dbContext.UserTokens.Remove(token);
         await dbContext.SaveChangesAsync();

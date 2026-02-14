@@ -16,6 +16,7 @@ public class User : IAuditable
     public required string Email { get; set; }
     public string HashedPassword { get; set; } = string.Empty;
     public bool EmailConfirmed { get; set; } = false;
+    public string SecurityStamp { get; set; } = Guid.NewGuid().ToString();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
