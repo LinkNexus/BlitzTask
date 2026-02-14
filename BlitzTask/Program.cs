@@ -1,3 +1,4 @@
+using System.Threading.RateLimiting;
 using BlitzTask.Features.Auth;
 using BlitzTask.Infrastructure.Auth;
 using BlitzTask.Infrastructure.Data;
@@ -8,6 +9,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using RazorLight;
 using Resend;
@@ -98,6 +100,71 @@ public class Program
 
         builder.Services.AddAuthorization();
 
+        // Configure rate limiting
+        builder.Services.AddRateLimiter(options =>
+        {
+            // Global rate limiter - 100 requests per minute per IP
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 100,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    }));
+
+            // Strict rate limiter for authentication endpoints - 5 requests per minute per IP
+            options.AddFixedWindowLimiter("auth", options =>
+            {
+                options.PermitLimit = 5;
+                options.Window = TimeSpan.FromMinutes(1);
+                options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                options.QueueLimit = 0;
+            });
+
+            // Moderate rate limiter for account creation - 3 requests per hour per IP
+            options.AddFixedWindowLimiter("account-creation", options =>
+            {
+                options.PermitLimit = 3;
+                options.Window = TimeSpan.FromHours(1);
+                options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                options.QueueLimit = 0;
+            });
+
+            // Rate limiter for password reset - 3 requests per hour per IP
+            options.AddFixedWindowLimiter("password-reset", options =>
+            {
+                options.PermitLimit = 3;
+                options.Window = TimeSpan.FromHours(1);
+                options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                options.QueueLimit = 0;
+            });
+
+            // Configure rejection response
+            options.OnRejected = async (context, token) =>
+            {
+                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+                {
+                    await context.HttpContext.Response.WriteAsJsonAsync(new
+                    {
+                        message = $"Too many requests. Please try again after {retryAfter.TotalSeconds} seconds.",
+                        retryAfter = retryAfter.TotalSeconds
+                    }, cancellationToken: token);
+                }
+                else
+                {
+                    await context.HttpContext.Response.WriteAsJsonAsync(new
+                    {
+                        message = "Too many requests. Please try again later."
+                    }, cancellationToken: token);
+                }
+            };
+        });
+
         builder.Services.AddOpenApi(options =>
         {
             options.AddDocumentTransformer(
@@ -124,6 +191,7 @@ public class Program
         }
 
         app.UseStaticFiles();
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseAntiforgery();

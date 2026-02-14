@@ -24,8 +24,10 @@ public static class AuthEndpoints
             .MapPost("/login", Login)
             .WithName("login")
             .AddEndpointFilter<ValidationFilter<LoginRequest>>()
+            .RequireRateLimiting("auth")
             .Produces<CurrentUser>()
             .Produces<ApiMessageResponse>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiMessageResponse>(StatusCodes.Status429TooManyRequests)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity);
 
         authGroup.MapPost("/logout", (Delegate)Logout).WithName("logout");
@@ -41,16 +43,20 @@ public static class AuthEndpoints
             .MapPost("/create-account", CreateAccount)
             .WithName("create-account")
             .AddEndpointFilter<ValidationFilter<CreateUserRequest>>()
+            .RequireRateLimiting("account-creation")
             .Produces<CurrentUser>()
             .Produces<ApiMessageResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiMessageResponse>(StatusCodes.Status429TooManyRequests)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity);
 
         authGroup
             .MapPost("/confirm-email", ConfirmEmail)
             .WithName("confirm-email")
             .AddEndpointFilter<ValidationFilter<ConfirmEmailRequest>>()
+            .RequireRateLimiting("auth")
             .Produces<ApiMessageResponse>(StatusCodes.Status200OK)
             .Produces<ApiMessageResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiMessageResponse>(StatusCodes.Status429TooManyRequests)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity);
 
         authGroup
@@ -62,14 +68,18 @@ public static class AuthEndpoints
             .MapPost("/request-password-reset", RequestPasswordReset)
             .WithName("request-password-reset")
             .AddEndpointFilter<ValidationFilter<RequestPasswordResetRequest>>()
+            .RequireRateLimiting("password-reset")
+            .Produces<ApiMessageResponse>(StatusCodes.Status429TooManyRequests)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity);
 
         authGroup
             .MapPost("/reset-password", ResetPassword)
             .WithName("reset-password")
             .AddEndpointFilter<ValidationFilter<ResetPasswordRequest>>()
+            .RequireRateLimiting("auth")
             .Produces<ApiMessageResponse>(StatusCodes.Status200OK)
             .Produces<ApiMessageResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiMessageResponse>(StatusCodes.Status429TooManyRequests)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity);
 
         return app;

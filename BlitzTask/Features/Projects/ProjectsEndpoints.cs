@@ -37,7 +37,7 @@ public static class ProjectsEndpoints
             StartDate = request.StartDate,
             DueDate = request.DueDate,
             Tags = request.Tags,
-            CreatedById = user.Id,
+            CreatedBy = user.Id,
             Participants =
             [
                 new ProjectParticipant
@@ -53,23 +53,24 @@ public static class ProjectsEndpoints
         await dbContext.SaveChangesAsync();
 
         return Results.Json(
-            new ProjectDetails(
-                Id: project.Id,
-                Name: project.Name,
-                Description: project.Description,
-                StartDate: project.StartDate,
-                DueDate: project.DueDate,
-                Tags: project.Tags,
-                CreatedBy: project.CreatedBy,
-                Participants: project
-                    .Participants.Select(p => new ProjectParticipantInfo(
-                        UserId: p.UserId,
-                        Role: p.Role,
-                        Name: p.User.Name,
-                        JoinedAt: p.CreatedAt
-                    ))
-                    .ToList()
-            )
+            // new ProjectDetails(
+            //     Id: project.Id,
+            //     Name: project.Name,
+            //     Description: project.Description,
+            //     StartDate: project.StartDate,
+            //     DueDate: project.DueDate,
+            //     Tags: project.Tags,
+            //     CreatedBy: project.CreatedBy,
+            //     Participants: project
+            //         .Participants.Select(p => new ProjectParticipantInfo(
+            //             UserId: p.UserId,
+            //             Role: p.Role,
+            //             Name: p.User.Name,
+            //             JoinedAt: p.CreatedAt
+            //         ))
+            //         .ToList()
+            // )
+            project
         );
     }
 }
