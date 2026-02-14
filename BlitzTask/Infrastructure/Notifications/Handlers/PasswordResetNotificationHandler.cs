@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Security.Cryptography;
 using BlitzTask.Features.Auth;
 using BlitzTask.Infrastructure.Data;
 using BlitzTask.Infrastructure.Jobs;
@@ -37,14 +38,14 @@ public class PasswordResetNotificationHandler(
             token = new UserToken
             {
                 User = user,
-                Token = Guid.NewGuid().ToString(),
+                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
                 TokenType = UserTokenType.PasswordReset,
                 ExpiresAt = DateTime.UtcNow.AddHours(1),
             };
         }
         else
         {
-            token.Token = Guid.NewGuid().ToString();
+            token.Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
             token.ExpiresAt = DateTime.UtcNow.AddHours(1);
         }
 
