@@ -4,6 +4,7 @@ using BlitzTask.Features.Auth;
 using BlitzTask.Infrastructure.Data;
 using BlitzTask.Infrastructure.Jobs;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 
 namespace BlitzTask.Infrastructure.Notifications.Handlers;
 
@@ -18,13 +19,17 @@ public class PasswordResetNotificationHandler(
         CancellationToken cancellationToken = default
     )
     {
-        var user = dbContext.Users.FirstOrDefault(u => u.Email == notification.Email);
+        var user = await dbContext.Users.FirstOrDefaultAsync(
+            u => u.Email == notification.Email,
+            cancellationToken
+        );
 
         if (user is null)
             return;
 
-        var token = dbContext.UserTokens.FirstOrDefault(t =>
-            t.UserId == user.Id && t.TokenType == UserTokenType.PasswordReset
+        var token = await dbContext.UserTokens.FirstOrDefaultAsync(
+            t => t.UserId == user.Id && t.TokenType == UserTokenType.PasswordReset,
+            cancellationToken
         );
 
         if (token is null)

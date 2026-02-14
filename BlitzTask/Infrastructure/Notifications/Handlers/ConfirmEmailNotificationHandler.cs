@@ -4,6 +4,7 @@ using BlitzTask.Infrastructure.Data;
 using BlitzTask.Infrastructure.Jobs;
 using Hangfire;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace BlitzTask.Infrastructure.Notifications.Handlers;
 
@@ -21,8 +22,11 @@ public class ConfirmEmailNotificationHandler(
         CancellationToken cancellationToken = default
     )
     {
-        var token = dbContext.UserTokens.FirstOrDefault(t =>
-            t.UserId == notification.User.Id && t.TokenType == UserTokenType.EmailConfirmation
+        var token = await dbContext.UserTokens.FirstOrDefaultAsync(
+            t =>
+                t.UserId == notification.User.Id
+                && t.TokenType == UserTokenType.EmailConfirmation,
+            cancellationToken
         );
 
         if (token is null)
