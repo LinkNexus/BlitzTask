@@ -27,6 +27,12 @@ public class Program
 
         builder.Services.AddHttpContextAccessor();
 
+        // Configure JSON serialization to handle reference loops
+        builder.Services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        });
+
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
         );
@@ -66,6 +72,8 @@ public class Program
         }
 
         builder.Services.AddNotifications();
+        
+        builder.Services.AddScoped<IFileService, LocalFileService>();
 
         builder.Services.AddAntiforgery(options =>
         {

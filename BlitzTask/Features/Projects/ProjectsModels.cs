@@ -1,7 +1,5 @@
-using System;
 using BlitzTask.Features.Auth;
 using BlitzTask.Infrastructure.Data.Interfaces;
-using Org.BouncyCastle.Ocsp;
 
 namespace BlitzTask.Features.Projects;
 
@@ -20,16 +18,18 @@ public class Project : IAuditable
     public string Description { get; set; } = string.Empty;
     public DateTimeOffset? StartDate { get; set; }
     public DateTimeOffset? DueDate { get; set; }
-    public string? ImageName { get; set; }
+    public Guid? ImageId { get; set; }
     public List<string> Tags { get; set; } = [];
     public DateTime UpdatedAt { get; set; }
     public DateTime CreatedAt { get; set; }
-    public Guid CreatedBy { get; set; }
+    public Guid CreatedById { get; set; }
 
     public List<ProjectParticipant> Participants { get; set; } = [];
+    public User CreatedBy { get; set; } = null!;
+    public Features.Files.File? Image { get; set; }
 }
 
-public class ProjectParticipant
+public class ProjectParticipant : ICreated
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ProjectId { get; set; }
@@ -47,7 +47,7 @@ public record CreateProjectRequest(
     DateTimeOffset? StartDate,
     DateTimeOffset? DueDate,
     IFormFile? Image,
-    List<string> Tags
+    List<string>? Tags
 );
 
 public record ProjectDetails(
@@ -56,7 +56,6 @@ public record ProjectDetails(
     string Description,
     DateTimeOffset? StartDate,
     DateTimeOffset? DueDate,
-    string? ImageName,
     List<string> Tags,
     Guid CreatedBy,
     List<ProjectParticipantInfo> Participants

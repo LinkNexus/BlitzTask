@@ -27,9 +27,8 @@ public class User : IAuditable
 
 public class UserToken
 {
-    public int Id { get; set; }
+    public required string Token { get; set; }
     public Guid UserId { get; set; }
-    public string Token { get; set; } = string.Empty;
     public UserTokenType TokenType { get; set; }
     public DateTime ExpiresAt { get; set; }
 

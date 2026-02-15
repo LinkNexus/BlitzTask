@@ -11,8 +11,14 @@ public class CreateProjectRequestValidator : AbstractValidator<CreateProjectRequ
         RuleFor(x => x.Description).MaximumLength(1000);
         RuleFor(x => x.DueDate).GreaterThan(x => x.StartDate).When(x => x.DueDate.HasValue);
         RuleFor(x => x.Tags)
-            .Must(tags => tags.Count <= 10)
-            .WithMessage("A project can have a maximum of 10 tags.");
+            .Must(tags =>
+            {
+                if (tags == null)
+                    return true;
+                var uniqueTags = new HashSet<string>(tags);
+                return uniqueTags.Count == tags.Count && tags.Count <= 10;
+            })
+            .WithMessage("A project can have a maximum of 10 distinct tags.");
         RuleForEach(x => x.Tags).NotEmpty().MaximumLength(50);
         RuleFor(x => x.Image)
             .Must(file => file == null || file.Length <= 3 * 1024 * 1024)

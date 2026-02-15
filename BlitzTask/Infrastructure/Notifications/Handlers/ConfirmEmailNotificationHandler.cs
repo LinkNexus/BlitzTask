@@ -24,9 +24,7 @@ public class ConfirmEmailNotificationHandler(
     )
     {
         var token = await dbContext.UserTokens.FirstOrDefaultAsync(
-            t =>
-                t.UserId == notification.User.Id
-                && t.TokenType == UserTokenType.EmailConfirmation,
+            t => t.UserId == notification.User.Id && t.TokenType == UserTokenType.EmailConfirmation,
             cancellationToken
         );
 
@@ -46,7 +44,7 @@ public class ConfirmEmailNotificationHandler(
             token.ExpiresAt = DateTime.UtcNow.AddHours(24);
         }
 
-        if (token.Id == 0)
+        if (dbContext.Entry(token).State == EntityState.Detached)
             dbContext.UserTokens.Add(token);
         await dbContext.SaveChangesAsync(cancellationToken);
 

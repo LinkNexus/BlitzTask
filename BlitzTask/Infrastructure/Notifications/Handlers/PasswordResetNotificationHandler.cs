@@ -49,7 +49,7 @@ public class PasswordResetNotificationHandler(
             token.ExpiresAt = DateTime.UtcNow.AddHours(1);
         }
 
-        if (token.Id == 0)
+        if (dbContext.Entry(token).State == EntityState.Detached)
             dbContext.UserTokens.Add(token);
         await dbContext.SaveChangesAsync(cancellationToken);
 

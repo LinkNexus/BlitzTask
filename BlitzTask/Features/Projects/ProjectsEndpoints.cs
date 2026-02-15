@@ -1,7 +1,8 @@
-using System;
+using System.Reflection;
 using BlitzTask.Infrastructure.Data;
 using BlitzTask.Infrastructure.Extensions;
 using BlitzTask.Infrastructure.Filters;
+using BlitzTask.Infrastructure.Services;
 using BlitzTask.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,8 +12,7 @@ public static class ProjectsEndpoints
 {
     public static IEndpointRouteBuilder MapProjectsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app
-            .MapGroup("/api/projects")
+        var group = app.MapGroup("/api/projects")
             .WithTags("Projects")
             .RequireAuthorization("EmailConfirmed");
 
@@ -21,7 +21,7 @@ public static class ProjectsEndpoints
             .MapPost("/", CreateProject)
             .WithName("create-project")
             .AddEndpointFilter<ValidationFilter<CreateProjectRequest>>()
-            .Produces<Project>(StatusCodes.Status201Created)
+            .Produces<ProjectDetails>(StatusCodes.Status201Created)
             .Produces<ApiMessageResponse>(StatusCodes.Status403Forbidden)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity);
 
@@ -31,18 +31,39 @@ public static class ProjectsEndpoints
     private static async Task<IResult> CreateProject(
         [FromForm] CreateProjectRequest request,
         ApplicationDbContext dbContext,
-        HttpContext context
+        IFileService fileService,
+        HttpContext context,
+        CancellationToken cancellationToken
     )
     {
         var user = context.GetUser();
+
+        Guid? imageId = null;
+
+        if (request.Image is not null)
+        {
+            var uploadRes = await fileService.UploadFileAsync(
+                request.Image,
+                "images",
+                user.Id,
+                cancellationToken
+            );
+
+            if (uploadRes.Success && uploadRes.FileId.HasValue)
+            {
+                imageId = uploadRes.FileId.Value;
+            }
+        }
+
         var project = new Project
         {
             Name = request.Name,
             Description = request.Description,
             StartDate = request.StartDate,
             DueDate = request.DueDate,
-            Tags = request.Tags,
-            CreatedBy = user.Id,
+            Tags = request.Tags ?? [],
+            ImageId = imageId,
+            CreatedBy = user,
             Participants =
             [
                 new ProjectParticipant
@@ -55,27 +76,26 @@ public static class ProjectsEndpoints
         };
 
         dbContext.Projects.Add(project);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return Results.Json(
-            // new ProjectDetails(
-            //     Id: project.Id,
-            //     Name: project.Name,
-            //     Description: project.Description,
-            //     StartDate: project.StartDate,
-            //     DueDate: project.DueDate,
-            //     Tags: project.Tags,
-            //     CreatedBy: project.CreatedBy,
-            //     Participants: project
-            //         .Participants.Select(p => new ProjectParticipantInfo(
-            //             UserId: p.UserId,
-            //             Role: p.Role,
-            //             Name: p.User.Name,
-            //             JoinedAt: p.CreatedAt
-            //         ))
-            //         .ToList()
-            // )
-            project
+            new ProjectDetails(
+                Id: project.Id,
+                Name: project.Name,
+                Description: project.Description,
+                StartDate: project.StartDate,
+                DueDate: project.DueDate,
+                Tags: project.Tags,
+                CreatedBy: project.CreatedBy.Id,
+                Participants: project
+                    .Participants.Select(p => new ProjectParticipantInfo(
+                        UserId: p.UserId,
+                        Role: p.Role,
+                        Name: p.User.Name,
+                        JoinedAt: p.CreatedAt
+                    ))
+                    .ToList()
+            )
         );
     }
 }
