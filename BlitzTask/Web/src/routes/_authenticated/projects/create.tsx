@@ -1,9 +1,16 @@
+import type { ProjectDetails } from "@/api";
+import { createProjectMutation } from "@/api/@tanstack/react-query.gen";
 import { DatePickerField } from "@/components/forms/fields/date-picker-field";
+import { DropzoneField } from "@/components/forms/fields/dropzone-field";
 import { InputField } from "@/components/forms/fields/input-field";
 import { TextCollectionField } from "@/components/forms/fields/text-collection-field";
 import { TextareaField } from "@/components/forms/fields/textarea-field";
-import { FieldGroup } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
+import { Field, FieldGroup } from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
+import { mapErrorsToForm } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
@@ -34,6 +41,7 @@ export const Route = createFileRoute("/_authenticated/projects/create")({
 
 function CreateProjectPage() {
 	const navigate = Route.useNavigate();
+	const queryClient = useQueryClient();
 
 	const form = useForm({
 		resolver: zodResolver(CreateProjectSchema),
@@ -47,7 +55,32 @@ function CreateProjectPage() {
 		},
 	});
 
-	async function onSubmit(data: z.infer<typeof CreateProjectSchema>) {}
+	const createProjectMut = useMutation({
+		...createProjectMutation(),
+		onSuccess: async (project: ProjectDetails) => {
+			// Set the project data in the cache for the single project page
+			// This avoids needing to refetch when navigating to the project
+			queryClient.setQueryData(["project", project.id], project);
+
+			// Navigate to the newly created project
+			await navigate({
+				to: "/projects/$projectId",
+				params: { projectId: project.id },
+			});
+		},
+		onError: (error) => {
+			// Handle validation errors
+			if (error && "errors" in error && error.errors) {
+				mapErrorsToForm(form, error.errors);
+			}
+		},
+	});
+
+	async function onSubmit(formData: z.infer<typeof CreateProjectSchema>) {
+		createProjectMut.mutate({
+			body: formData,
+		});
+	}
 
 	return (
 		<div className="min-h-screen">
@@ -130,6 +163,43 @@ function CreateProjectPage() {
 								/>
 							)}
 						/>
+
+						<Controller
+							name="image"
+							control={form.control}
+							render={({ field, fieldState }) => (
+								<DropzoneField
+									field={field}
+									fieldState={fieldState}
+									labelProps={{ children: "Project Image" }}
+									inputProps={{
+										accept: {
+											"image/png": [".png"],
+											"image/jpeg": [".jpg", ".jpeg"],
+											"image/svg+xml": [".svg"],
+											"image/webp": [".webp"],
+										},
+										maxSize: 3 * 1024 * 1024,
+										multiple: false,
+										onDrop: (file) => {
+											field.onChange(file[0] || null);
+										},
+									}}
+								/>
+							)}
+						/>
+
+						<Field>
+							<Button type="submit" disabled={form.formState.isSubmitting}>
+								{form.formState.isSubmitting ? (
+									<>
+										<Spinner /> Creating project...
+									</>
+								) : (
+									"Create project"
+								)}
+							</Button>
+						</Field>
 
 						{/* <Controller */}
 						{/*   control={form.control} */}

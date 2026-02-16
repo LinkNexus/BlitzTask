@@ -1,3 +1,6 @@
+import { resendConfirmEmail } from "@/api";
+import { client } from "@/api/client.gen";
+import { Button } from "@/components/ui/button";
 import {
 	SidebarInset,
 	SidebarProvider,
@@ -6,11 +9,11 @@ import {
 import { cn } from "@/lib/utils";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { AppSidebar } from "./-components/sidebar/app-sidebar";
 
 export const Route = createFileRoute("/_authenticated")({
 	beforeLoad: ({ context, location }) => {
-		console.log({ user: context.user });
 		if (!context.user) {
 			throw redirect({
 				to: "/login",
@@ -19,6 +22,40 @@ export const Route = createFileRoute("/_authenticated")({
 				},
 			});
 		}
+
+		client.interceptors.response.use((response) => {
+			if (response.status === 401) {
+				throw redirect({
+					to: "/login",
+					search: {
+						redirect: location.href,
+					},
+				});
+			}
+
+			if (response.status === 403) {
+				toast.error(
+					"You don't have permission to perform this action, because your email adress is not verified.",
+					{
+						action: (
+							<Button
+								onClick={async () => {
+									await resendConfirmEmail().then(() => {
+										toast.success(
+											"Verification email resent! Please check your inbox.",
+										);
+									});
+								}}
+							>
+								Resend verification email
+							</Button>
+						),
+					},
+				);
+			}
+
+			return response;
+		});
 	},
 	component: RouteComponent,
 });

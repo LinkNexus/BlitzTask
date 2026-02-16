@@ -5,6 +5,7 @@ using BlitzTask.Infrastructure.Auth;
 using BlitzTask.Infrastructure.Data;
 using BlitzTask.Infrastructure.Notifications;
 using BlitzTask.Infrastructure.Services;
+using BlitzTask.Shared.Models;
 using FluentValidation;
 using Hangfire;
 using Hangfire.PostgreSql;
@@ -30,7 +31,12 @@ public class Program
         // Configure JSON serialization to handle reference loops
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
-            options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+            options.SerializerOptions.ReferenceHandler = System
+                .Text
+                .Json
+                .Serialization
+                .ReferenceHandler
+                .IgnoreCycles;
         });
 
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -72,7 +78,7 @@ public class Program
         }
 
         builder.Services.AddNotifications();
-        
+
         builder.Services.AddScoped<IFileService, LocalFileService>();
 
         builder.Services.AddAntiforgery(options =>
@@ -130,55 +136,69 @@ public class Program
                         PermitLimit = 100,
                         Window = TimeSpan.FromMinutes(1),
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        QueueLimit = 0
-                    }));
+                        QueueLimit = 0,
+                    }
+                )
+            );
 
             // Strict rate limiter for authentication endpoints - 5 requests per minute per IP
-            options.AddFixedWindowLimiter("auth", options =>
-            {
-                options.PermitLimit = 5;
-                options.Window = TimeSpan.FromMinutes(1);
-                options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                options.QueueLimit = 0;
-            });
+            options.AddFixedWindowLimiter(
+                "auth",
+                options =>
+                {
+                    options.PermitLimit = 5;
+                    options.Window = TimeSpan.FromMinutes(1);
+                    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                    options.QueueLimit = 0;
+                }
+            );
 
             // Moderate rate limiter for account creation - 3 requests per hour per IP
-            options.AddFixedWindowLimiter("account-creation", options =>
-            {
-                options.PermitLimit = 3;
-                options.Window = TimeSpan.FromHours(1);
-                options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                options.QueueLimit = 0;
-            });
+            options.AddFixedWindowLimiter(
+                "account-creation",
+                options =>
+                {
+                    options.PermitLimit = 3;
+                    options.Window = TimeSpan.FromHours(1);
+                    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                    options.QueueLimit = 0;
+                }
+            );
 
             // Rate limiter for password reset - 3 requests per hour per IP
-            options.AddFixedWindowLimiter("password-reset", options =>
-            {
-                options.PermitLimit = 3;
-                options.Window = TimeSpan.FromHours(1);
-                options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                options.QueueLimit = 0;
-            });
+            options.AddFixedWindowLimiter(
+                "password-reset",
+                options =>
+                {
+                    options.PermitLimit = 3;
+                    options.Window = TimeSpan.FromHours(1);
+                    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                    options.QueueLimit = 0;
+                }
+            );
 
             // Configure rejection response
             options.OnRejected = async (context, token) =>
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                
+
                 if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
                 {
-                    await context.HttpContext.Response.WriteAsJsonAsync(new
-                    {
-                        message = $"Too many requests. Please try again after {retryAfter.TotalSeconds} seconds.",
-                        retryAfter = retryAfter.TotalSeconds
-                    }, cancellationToken: token);
+                    await context.HttpContext.Response.WriteAsJsonAsync(
+                        new
+                        {
+                            message = $"Too many requests. Please try again after {retryAfter.TotalSeconds} seconds.",
+                            retryAfter = retryAfter.TotalSeconds,
+                        },
+                        cancellationToken: token
+                    );
                 }
                 else
                 {
-                    await context.HttpContext.Response.WriteAsJsonAsync(new
-                    {
-                        message = "Too many requests. Please try again later."
-                    }, cancellationToken: token);
+                    await context.HttpContext.Response.WriteAsJsonAsync(
+                        new { message = "Too many requests. Please try again later." },
+                        cancellationToken: token
+                    );
                 }
             };
         });
@@ -216,8 +236,22 @@ public class Program
 
         app.MapAuthEndpoints();
         app.MapProjectsEndpoints();
+
+        // CSRF token endpoint
+        app.MapGet(
+                "/api/csrf-token",
+                (Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery, HttpContext context) =>
+                {
+                    var tokens = antiforgery.GetAndStoreTokens(context);
+                    return TypedResults.Ok(new CsrfTokenResponse(tokens.RequestToken!));
+                }
+            )
+            .WithTags("Security");
+
         app.MapFallbackToFile("index.html");
 
         app.Run();
     }
+
+    // private static
 }

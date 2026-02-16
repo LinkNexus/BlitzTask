@@ -1,137 +1,66 @@
 import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible.tsx";
-import {
 	SidebarGroup,
 	SidebarGroupLabel,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	SidebarMenuSub,
-	SidebarMenuSubButton,
-	SidebarMenuSubItem,
 } from "@/components/ui/sidebar.tsx";
-import { Spinner } from "@/components/ui/spinner.tsx";
-import { useLocation } from "@tanstack/react-router";
-import { Bot, Home, Inbox, Search } from "lucide-react";
-import { useMemo } from "react";
+import { Link, useLocation } from "@tanstack/react-router";
+import { memo } from "react";
+import { getMainItems } from "./sidebar-config.ts";
 
-// type NavigationItem = {
-//   title: string;
-//   url: string;
-//   icon: ComponentType<any>;
-//   isActive: boolean;
-//   badge?: string;
-// };
+export const NavMain = memo(() => {
+	const location = useLocation();
+	const mainItems = getMainItems();
 
-const projects = [
-	{
-		name: "Project Alpha",
-	},
-	{
-		name: "Project Beta",
-	},
-	{
-		name: "Project Gamma",
-	},
-];
-
-export function NavMain() {
-	const currentLocation = useLocation();
-
-	const items = useMemo(
-		() => [
-			{
-				title: "Search",
-				url: "/search",
-				icon: Search,
-				isActive: currentLocation.pathname === "/search",
-			},
-			{
-				title: "Home",
-				url: "/",
-				icon: Home,
-				isActive: currentLocation.pathname === "/",
-			},
-			{
-				title: "Inbox",
-				url: "/inbox",
-				icon: Inbox,
-				isActive: currentLocation.pathname === "/inbox",
-			},
-			{
-				title: "Ask AI",
-				url: "/ask-ai",
-				icon: Bot,
-				isActive: currentLocation.pathname === "/ask-ai",
-			},
-		],
-		[currentLocation],
-	);
+	const isActive = (href: string) => {
+		// Handle root path
+		if (href === "/") {
+			return location.pathname === "/";
+		}
+		return location.pathname.startsWith(href);
+	};
 
 	return (
 		<SidebarGroup>
-			<SidebarGroupLabel>Platform</SidebarGroupLabel>
+			<SidebarGroupLabel className="text-xs font-semibold">
+				Navigation
+			</SidebarGroupLabel>
 			<SidebarMenu>
-				{items.map((item) => (
-					<Collapsible
-						key={item.title}
-						defaultOpen={item.isActive}
-						className="group/collapsible"
-					>
-						<SidebarMenuItem>
-							{item.title === "Projects" ? (
-								<>
-									<CollapsibleTrigger>
-										<SidebarMenuButton
-											tooltip={item.title}
-											isActive={item.isActive}
-										>
-											{item.icon && <item.icon />}
-											<span>{item.title}</span>
-										</SidebarMenuButton>
-									</CollapsibleTrigger>
-									<CollapsibleContent>
-										<SidebarMenuSub className="w-full">
-											{!projects ? (
-												<Spinner className="size-3" />
-											) : (
-												projects.map((p) => (
-													<SidebarMenuSubItem key={p.name}>
-														<SidebarMenuSubButton asChild>
-															<a href={"/projects"}>
-																<span>{p.name}</span>
-															</a>
-														</SidebarMenuSubButton>
-													</SidebarMenuSubItem>
-												))
-											)}
-										</SidebarMenuSub>
-									</CollapsibleContent>
-								</>
-							) : (
-								<SidebarMenuButton
-									asChild
-									tooltip={item.title}
-									isActive={item.isActive}
-								>
-									<a href={item.url}>
-										{item.icon && <item.icon />}
-										<span>{item.title}</span>
-										{/* {"badge" in item && item.badge && ( */}
-										{/*   <Badge variant="secondary" className="ml-auto"> */}
-										{/*     {item.badge} */}
-										{/*   </Badge> */}
-										{/* )} */}
-									</a>
-								</SidebarMenuButton>
-							)}
-						</SidebarMenuItem>
-					</Collapsible>
+				{mainItems.map((item) => (
+					<SidebarMenuItem key={item.id}>
+						<SidebarMenuButton
+							asChild
+							isActive={isActive(item.href)}
+							tooltip={{
+								children: (
+									<div className="space-y-1">
+										<p className="font-medium">{item.title}</p>
+										{item.description && (
+											<p className="text-xs text-muted-foreground">
+												{item.description}
+											</p>
+										)}
+									</div>
+								),
+							}}
+							className="relative"
+						>
+							<Link to={item.href}>
+								<item.icon className="h-4 w-4 shrink-0" />
+								<span className="truncate text-sm font-medium">
+									{item.title}
+								</span>
+								{item.badge && (
+									<span className="ml-auto inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+										{item.badge}
+									</span>
+								)}
+							</Link>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
 				))}
 			</SidebarMenu>
 		</SidebarGroup>
 	);
-}
+});

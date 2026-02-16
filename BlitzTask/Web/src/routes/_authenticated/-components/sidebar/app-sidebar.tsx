@@ -1,48 +1,56 @@
+import Logo from "@/assets/logo.svg";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarRail,
+	Sidebar,
+	SidebarContent,
+	SidebarFooter,
+	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuItem,
+	SidebarRail,
 } from "@/components/ui/sidebar.tsx";
 import { type ComponentProps, memo } from "react";
 import { NavMain } from "./nav-main.tsx";
+import { NavProjects } from "./nav-projects.tsx";
 import { NavSecondary } from "./nav-secondary.tsx";
 import { NavUser } from "./nav-user.tsx";
-import Logo from "@/assets/logo.svg";
-import { NavProjects } from "./nav-projects.tsx";
 
-const AppSidebar = memo(function ({ ...props }: ComponentProps<typeof Sidebar>) {
-  return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-2">
-          <img src={Logo} alt="Blitz-Task" className="h-10 w-10" />
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold">Blitz-Task</span>
-            <span className="truncate text-xs text-muted-foreground">Tasks Management</span>
-          </div>
-        </div>
-      </SidebarHeader>
+export const AppSidebar = memo(
+	({ ...props }: ComponentProps<typeof Sidebar>) => (
+		<Sidebar collapsible="icon" {...props}>
+			{/* Header with logo */}
+			<SidebarHeader className="border-b border-sidebar-border">
+				<div className="flex items-center gap-3 px-2 py-3">
+					<img src={Logo} alt="Blitz-Task" className="h-10 w-10 shrink-0" />
+					<div className="flex flex-1 flex-col gap-0.5 text-left">
+						<span className="truncate text-sm font-bold text-sidebar-foreground">
+							Blitz-Task
+						</span>
+						<span className="truncate text-xs text-sidebar-foreground/60">
+							Task Management
+						</span>
+					</div>
+				</div>
+			</SidebarHeader>
 
-      <SidebarContent>
-        <NavMain />
-        <NavProjects />
-        <NavSecondary />
-      </SidebarContent>
+			{/* Main navigation content */}
+			<SidebarContent className="gap-0">
+				<NavMain />
+				<NavProjects />
+				<NavSecondary />
+			</SidebarContent>
 
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <NavUser />
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
-  );
-});
+			{/* User menu footer */}
+			<SidebarFooter className="border-t border-sidebar-border">
+				<SidebarMenu>
+					<SidebarMenuItem>
+						<NavUser />
+					</SidebarMenuItem>
+				</SidebarMenu>
+			</SidebarFooter>
 
-export { AppSidebar };
+			<SidebarRail />
+		</Sidebar>
+	),
+);
+
+AppSidebar.displayName = "AppSidebar";

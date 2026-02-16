@@ -5,6 +5,7 @@ using BlitzTask.Infrastructure.Filters;
 using BlitzTask.Infrastructure.Services;
 using BlitzTask.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BlitzTask.Features.Projects;
 
@@ -18,11 +19,15 @@ public static class ProjectsEndpoints
 
         // group.MapGet("/", GetProjects);
         group
+            .MapGet("/{projectId}", GetProject)
+            .WithName("get-project")
+            .Produces<ProjectDetails>(StatusCodes.Status200OK);
+        
+        group
             .MapPost("/", CreateProject)
             .WithName("create-project")
             .AddEndpointFilter<ValidationFilter<CreateProjectRequest>>()
             .Produces<ProjectDetails>(StatusCodes.Status201Created)
-            .Produces<ApiMessageResponse>(StatusCodes.Status403Forbidden)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity);
 
         return app;
@@ -87,8 +92,65 @@ public static class ProjectsEndpoints
                 DueDate: project.DueDate,
                 Tags: project.Tags,
                 CreatedBy: project.CreatedBy.Id,
-                Participants: project
-                    .Participants.Select(p => new ProjectParticipantInfo(
+                Participants:
+                [
+                    .. project.Participants.Select(p => new ProjectParticipantInfo(
+                        UserId: p.UserId,
+                        Role: p.Role,
+                        Name: p.User.Name,
+                        JoinedAt: p.CreatedAt
+                    )),
+                ]
+            )
+        );
+    }
+
+    private static async Task<IResult> GetProject(
+        Guid projectId,
+        ApplicationDbContext dbContext,
+        HttpContext context,
+        CancellationToken cancellationToken
+    )
+    {
+        var user = context.GetUser();
+
+        // Fetch project with all necessary relations
+        var project = await dbContext.Projects
+            .Include(p => p.Participants)
+                .ThenInclude(pp => pp.User)
+            .Include(p => p.CreatedBy)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
+
+        if (project == null)
+        {
+            return Results.Json(
+                new ApiMessageResponse("Project not found"),
+                statusCode: StatusCodes.Status404NotFound
+            );
+        }
+
+        // Check if user is a participant of the project
+        var isParticipant = project.Participants.Any(p => p.UserId == user.Id);
+        if (!isParticipant)
+        {
+            return Results.Json(
+                new ApiMessageResponse("You do not have access to this project"),
+                statusCode: StatusCodes.Status403Forbidden
+            );
+        }
+
+        return Results.Ok(
+            new ProjectDetails(
+                Id: project.Id,
+                Name: project.Name,
+                Description: project.Description,
+                StartDate: project.StartDate,
+                DueDate: project.DueDate,
+                Tags: project.Tags,
+                CreatedBy: project.CreatedBy.Id,
+                Participants: project.Participants
+                    .Select(p => new ProjectParticipantInfo(
                         UserId: p.UserId,
                         Role: p.Role,
                         Name: p.User.Name,
