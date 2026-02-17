@@ -6,10 +6,12 @@ import {
 	SidebarProvider,
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { useAccount } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { EmailVerificationBanner } from "./-components/email-verification-banner";
 import { AppSidebar } from "./-components/sidebar/app-sidebar";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -62,6 +64,20 @@ export const Route = createFileRoute("/_authenticated")({
 
 function RouteComponent() {
 	const [sidebarOpen, setSidebarOpen] = useState(true);
+	const { user } = useAccount();
+	const [isResending, setIsResending] = useState(false);
+
+	const handleResendEmail = async () => {
+		setIsResending(true);
+		try {
+			await resendConfirmEmail();
+			toast.success("Verification email resent! Please check your inbox.");
+		} catch (error) {
+			toast.error("Failed to resend verification email. Please try again.");
+		} finally {
+			setIsResending(false);
+		}
+	};
 
 	return (
 		<SidebarProvider
@@ -86,7 +102,12 @@ function RouteComponent() {
 					</div>
 				</header>
 				<div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-					<Outlet />
+					<div className="min-h-screen">
+						<div className="max-w-4xl mx-auto py-8 px-4">
+							{!user.emailConfirmed && <EmailVerificationBanner />}
+							<Outlet />
+						</div>
+					</div>
 				</div>
 			</SidebarInset>
 		</SidebarProvider>

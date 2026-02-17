@@ -8,6 +8,7 @@ import { TextareaField } from "@/components/forms/fields/textarea-field";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
+import { useAccount } from "@/hooks/use-current-user";
 import { mapErrorsToForm } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/_authenticated/projects/create")({
 function CreateProjectPage() {
 	const navigate = Route.useNavigate();
 	const queryClient = useQueryClient();
+	const { user } = useAccount();
 
 	const form = useForm({
 		resolver: zodResolver(CreateProjectSchema),
@@ -82,139 +84,147 @@ function CreateProjectPage() {
 		});
 	}
 
+	const isFormDisabled = !user.emailConfirmed;
+
 	return (
-		<div className="min-h-screen">
-			<div className="max-w-4xl mx-auto py-8 px-4">
-				{/* Header */}
-				<div className="mb-8">
-					<Link
-						to={DashboardRoute.to}
-						onClick={() => navigate({ to: "/dashboard" })}
-						className="mb-4 flex items-center hover:underline underline-offset-2"
-					>
-						<ArrowLeft className="mr-2 h-4 w-4" />
-						Back to Dashboard
-					</Link>
-					<h1 className="text-3xl font-bold">Create New Project</h1>
-					<p className="mt-2">
-						Set up your project with all the details needed to get started
-					</p>
-				</div>
-
-				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-					<FieldGroup>
-						<Controller
-							control={form.control}
-							name="name"
-							render={({ field, fieldState }) => (
-								<InputField
-									field={field}
-									fieldState={fieldState}
-									labelProps={{ children: "Project Name" }}
-								/>
-							)}
-						/>
-
-						<Controller
-							control={form.control}
-							name="description"
-							render={({ field, fieldState }) => (
-								<TextareaField
-									field={field}
-									inputProps={{ rows: 7 }}
-									fieldState={fieldState}
-									labelProps={{ children: "Project Description" }}
-								/>
-							)}
-						/>
-
-						<Controller
-							control={form.control}
-							name="tags"
-							render={({ field, fieldState }) => (
-								<TextCollectionField
-									field={field}
-									fieldState={fieldState}
-									labelProps={{ children: "Tags" }}
-								/>
-							)}
-						/>
-
-						<Controller
-							control={form.control}
-							name="startDate"
-							render={({ field, fieldState }) => (
-								<DatePickerField
-									field={field}
-									fieldState={fieldState}
-									labelProps={{ children: "Start Date" }}
-								/>
-							)}
-						/>
-
-						<Controller
-							control={form.control}
-							name="dueDate"
-							render={({ field, fieldState }) => (
-								<DatePickerField
-									field={field}
-									fieldState={fieldState}
-									labelProps={{ children: "Due Date" }}
-								/>
-							)}
-						/>
-
-						<Controller
-							name="image"
-							control={form.control}
-							render={({ field, fieldState }) => (
-								<DropzoneField
-									field={field}
-									fieldState={fieldState}
-									labelProps={{ children: "Project Image" }}
-									inputProps={{
-										accept: {
-											"image/png": [".png"],
-											"image/jpeg": [".jpg", ".jpeg"],
-											"image/svg+xml": [".svg"],
-											"image/webp": [".webp"],
-										},
-										maxSize: 3 * 1024 * 1024,
-										multiple: false,
-										onDrop: (file) => {
-											field.onChange(file[0] || null);
-										},
-									}}
-								/>
-							)}
-						/>
-
-						<Field>
-							<Button type="submit" disabled={form.formState.isSubmitting}>
-								{form.formState.isSubmitting ? (
-									<>
-										<Spinner /> Creating project...
-									</>
-								) : (
-									"Create project"
-								)}
-							</Button>
-						</Field>
-
-						{/* <Controller */}
-						{/*   control={form.control} */}
-						{/*   name="tags" */}
-						{/*   render={({ field, fieldState }) => ( */}
-						{/*     <ChoiceCollectionField */}
-						{/*       field={field} */}
-						{/*       labelProps={{ children: "Tags" }} */}
-						{/*       // allItems={} */}
-						{/*     /> */}
-						{/*   )} */}
-						{/* /> */}
-					</FieldGroup>
-				</form>
+		<>
+			{/* Header */}
+			<div className="mb-8">
+				<Link
+					to={DashboardRoute.to}
+					onClick={() => navigate({ to: "/dashboard" })}
+					className="mb-4 flex items-center hover:underline underline-offset-2"
+				>
+					<ArrowLeft className="mr-2 h-4 w-4" />
+					Back to Dashboard
+				</Link>
+				<h1 className="text-3xl font-bold">Create New Project</h1>
+				<p className="mt-2">
+					Set up your project with all the details needed to get started
+				</p>
 			</div>
-		</div>
+
+			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+				<FieldGroup>
+					<Controller
+						control={form.control}
+						name="name"
+						render={({ field, fieldState }) => (
+							<InputField
+								field={field}
+								fieldState={fieldState}
+								labelProps={{ children: "Project Name" }}
+								inputProps={{ disabled: isFormDisabled }}
+							/>
+						)}
+					/>
+
+					<Controller
+						control={form.control}
+						name="description"
+						render={({ field, fieldState }) => (
+							<TextareaField
+								field={field}
+								inputProps={{ rows: 7, disabled: isFormDisabled }}
+								fieldState={fieldState}
+								labelProps={{ children: "Project Description" }}
+							/>
+						)}
+					/>
+
+					<Controller
+						control={form.control}
+						name="tags"
+						render={({ field, fieldState }) => (
+							<TextCollectionField
+								field={field}
+								fieldState={fieldState}
+								labelProps={{ children: "Tags" }}
+								inputProps={{ disabled: isFormDisabled }}
+							/>
+						)}
+					/>
+
+					<Controller
+						control={form.control}
+						name="startDate"
+						render={({ field, fieldState }) => (
+							<DatePickerField
+								field={field}
+								fieldState={fieldState}
+								labelProps={{ children: "Start Date" }}
+								inputProps={{ disabled: isFormDisabled }}
+							/>
+						)}
+					/>
+
+					<Controller
+						control={form.control}
+						name="dueDate"
+						render={({ field, fieldState }) => (
+							<DatePickerField
+								field={field}
+								fieldState={fieldState}
+								labelProps={{ children: "Due Date" }}
+								inputProps={{ disabled: isFormDisabled }}
+							/>
+						)}
+					/>
+
+					<Controller
+						name="image"
+						control={form.control}
+						render={({ field, fieldState }) => (
+							<DropzoneField
+								field={field}
+								fieldState={fieldState}
+								labelProps={{ children: "Project Image" }}
+								inputProps={{
+									accept: {
+										"image/png": [".png"],
+										"image/jpeg": [".jpg", ".jpeg"],
+										"image/svg+xml": [".svg"],
+										"image/webp": [".webp"],
+									},
+									maxSize: 3 * 1024 * 1024,
+									multiple: false,
+									onDrop: (file) => {
+										field.onChange(file[0] || null);
+									},
+									disabled: isFormDisabled,
+								}}
+							/>
+						)}
+					/>
+
+					<Field>
+						<Button
+							type="submit"
+							disabled={form.formState.isSubmitting || isFormDisabled}
+						>
+							{form.formState.isSubmitting ? (
+								<>
+									<Spinner /> Creating project...
+								</>
+							) : (
+								"Create project"
+							)}
+						</Button>
+					</Field>
+
+					{/* <Controller */}
+					{/*   control={form.control} */}
+					{/*   name="tags" */}
+					{/*   render={({ field, fieldState }) => ( */}
+					{/*     <ChoiceCollectionField */}
+					{/*       field={field} */}
+					{/*       labelProps={{ children: "Tags" }} */}
+					{/*       // allItems={} */}
+					{/*     /> */}
+					{/*   )} */}
+					{/* /> */}
+				</FieldGroup>
+			</form>
+		</>
 	);
 }

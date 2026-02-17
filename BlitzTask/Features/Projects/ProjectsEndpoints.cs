@@ -11,6 +11,31 @@ namespace BlitzTask.Features.Projects;
 
 public static class ProjectsEndpoints
 {
+    /// <summary>
+    /// Reusable query extension to project Project entity to ProjectDetails DTO
+    /// </summary>
+    private static IQueryable<ProjectDetails> SelectProjectDetails(
+        this IQueryable<Project> projects
+    )
+    {
+        return projects.Select(p => new ProjectDetails(
+            p.Id,
+            p.Name,
+            p.Description,
+            p.StartDate,
+            p.DueDate,
+            p.Tags,
+            p.CreatedBy.Id,
+            p.Participants.Select(pp => new ProjectParticipantInfo(
+                    pp.UserId,
+                    pp.User.Name,
+                    pp.Role,
+                    pp.CreatedAt
+                ))
+                .ToList()
+        ));
+    }
+
     public static IEndpointRouteBuilder MapProjectsEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/projects")
@@ -22,7 +47,7 @@ public static class ProjectsEndpoints
             .MapGet("/{projectId}", GetProject)
             .WithName("get-project")
             .Produces<ProjectDetails>(StatusCodes.Status200OK);
-        
+
         group
             .MapPost("/", CreateProject)
             .WithName("create-project")
@@ -83,26 +108,14 @@ public static class ProjectsEndpoints
         dbContext.Projects.Add(project);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return Results.Json(
-            new ProjectDetails(
-                Id: project.Id,
-                Name: project.Name,
-                Description: project.Description,
-                StartDate: project.StartDate,
-                DueDate: project.DueDate,
-                Tags: project.Tags,
-                CreatedBy: project.CreatedBy.Id,
-                Participants:
-                [
-                    .. project.Participants.Select(p => new ProjectParticipantInfo(
-                        UserId: p.UserId,
-                        Role: p.Role,
-                        Name: p.User.Name,
-                        JoinedAt: p.CreatedAt
-                    )),
-                ]
-            )
-        );
+        // Fetch the created project with all details using the reusable projection
+        var projectDetails = await dbContext
+            .Projects.Where(p => p.Id == project.Id)
+            .SelectProjectDetails()
+            .AsNoTracking()
+            .FirstAsync(cancellationToken);
+
+        return Results.Json(projectDetails, statusCode: StatusCodes.Status201Created);
     }
 
     private static async Task<IResult> GetProject(
@@ -114,13 +127,13 @@ public static class ProjectsEndpoints
     {
         var user = context.GetUser();
 
-        // Fetch project with all necessary relations
-        var project = await dbContext.Projects
-            .Include(p => p.Participants)
-                .ThenInclude(pp => pp.User)
-            .Include(p => p.CreatedBy)
+        var project = await dbContext
+            .Projects.Where(p =>
+                p.Id == projectId && p.Participants.Any(pp => pp.UserId == user.Id)
+            )
+            .SelectProjectDetails()
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (project == null)
         {
@@ -130,34 +143,6 @@ public static class ProjectsEndpoints
             );
         }
 
-        // Check if user is a participant of the project
-        var isParticipant = project.Participants.Any(p => p.UserId == user.Id);
-        if (!isParticipant)
-        {
-            return Results.Json(
-                new ApiMessageResponse("You do not have access to this project"),
-                statusCode: StatusCodes.Status403Forbidden
-            );
-        }
-
-        return Results.Ok(
-            new ProjectDetails(
-                Id: project.Id,
-                Name: project.Name,
-                Description: project.Description,
-                StartDate: project.StartDate,
-                DueDate: project.DueDate,
-                Tags: project.Tags,
-                CreatedBy: project.CreatedBy.Id,
-                Participants: project.Participants
-                    .Select(p => new ProjectParticipantInfo(
-                        UserId: p.UserId,
-                        Role: p.Role,
-                        Name: p.User.Name,
-                        JoinedAt: p.CreatedAt
-                    ))
-                    .ToList()
-            )
-        );
+        return Results.Ok(project);
     }
 }
