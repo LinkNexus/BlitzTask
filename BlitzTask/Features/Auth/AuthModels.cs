@@ -27,6 +27,7 @@ public class User : IAuditable
 
 public class UserToken
 {
+    public int Id { get; set; }
     public required string Token { get; set; }
     public Guid UserId { get; set; }
     public UserTokenType TokenType { get; set; }

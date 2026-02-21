@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Threading.RateLimiting;
 using BlitzTask.Features.Auth;
 using BlitzTask.Features.Projects;
@@ -86,24 +87,26 @@ public class Program
             options.HeaderName = "X-CSRF-TOKEN";
         });
 
-        builder.Services.AddHangfire(configuration =>
-            configuration
-                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-                .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UsePostgreSqlStorage(options =>
-                    options.UseNpgsqlConnection(
-                        builder.Configuration.GetConnectionString("DefaultConnection")
-                    )
-                )
-        );
-
-        // Add the Hangfire server
-        builder.Services.AddHangfireServer(options =>
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        if (!string.IsNullOrEmpty(connectionString))
         {
-            options.WorkerCount = Environment.ProcessorCount * 2;
-            options.ServerName = $"{Environment.MachineName}:{Guid.NewGuid()}";
-        });
+            builder.Services.AddHangfire(configuration =>
+                configuration
+                    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                    .UseSimpleAssemblyNameTypeSerializer()
+                    .UseRecommendedSerializerSettings()
+                    .UsePostgreSqlStorage(options =>
+                        options.UseNpgsqlConnection(connectionString)
+                    )
+            );
+
+            // Add the Hangfire server
+            builder.Services.AddHangfireServer(options =>
+            {
+                options.WorkerCount = Environment.ProcessorCount * 2;
+                options.ServerName = $"{Environment.MachineName}:{Guid.NewGuid()}";
+            });
+        }
 
         builder
             .Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -222,10 +225,13 @@ public class Program
             app.UseDeveloperExceptionPage();
 
             // Hangfire Dashboard (only in development for now)
-            app.UseHangfireDashboard(
-                "/hangfire",
-                new DashboardOptions { DashboardTitle = "BlitzTask Background Jobs" }
-            );
+            if (!string.IsNullOrEmpty(connectionString))
+            {
+                app.UseHangfireDashboard(
+                    "/hangfire",
+                    new DashboardOptions { DashboardTitle = "BlitzTask Background Jobs" }
+                );
+            }
         }
 
         app.UseStaticFiles();

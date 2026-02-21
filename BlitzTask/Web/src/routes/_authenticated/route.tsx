@@ -14,6 +14,39 @@ import { toast } from "sonner";
 import { EmailVerificationBanner } from "./-components/email-verification-banner";
 import { AppSidebar } from "./-components/sidebar/app-sidebar";
 
+const authErrorsInterceptor = (error: unknown, response: Response) => {
+	if (response.status === 401) {
+		throw redirect({
+			to: "/login",
+		});
+	}
+
+	if (response.status === 403) {
+		toast.error("Email not verified", {
+			description:
+				"You don't have permission to perform this action, because your email adress is not verified.",
+			action: (
+				<Button
+					onClick={async () => {
+						const { data } = await resendConfirmEmail();
+
+						if (data)
+							toast.success("Email confirmed", {
+								description: data.message,
+							});
+					}}
+				>
+					Confirm
+				</Button>
+			),
+		});
+
+		return null;
+	}
+
+	return error;
+};
+
 export const Route = createFileRoute("/_authenticated")({
 	beforeLoad: ({ context, location }) => {
 		if (!context.user) {
@@ -25,39 +58,9 @@ export const Route = createFileRoute("/_authenticated")({
 			});
 		}
 
-		client.interceptors.response.use((response) => {
-			if (response.status === 401) {
-				throw redirect({
-					to: "/login",
-					search: {
-						redirect: location.href,
-					},
-				});
-			}
-
-			if (response.status === 403) {
-				toast.error(
-					"You don't have permission to perform this action, because your email adress is not verified.",
-					{
-						action: (
-							<Button
-								onClick={async () => {
-									await resendConfirmEmail().then(() => {
-										toast.success(
-											"Verification email resent! Please check your inbox.",
-										);
-									});
-								}}
-							>
-								Resend verification email
-							</Button>
-						),
-					},
-				);
-			}
-
-			return response;
-		});
+		if (!client.interceptors.error.exists(authErrorsInterceptor)) {
+			client.interceptors.error.use(authErrorsInterceptor);
+		}
 	},
 	component: RouteComponent,
 });
@@ -65,19 +68,6 @@ export const Route = createFileRoute("/_authenticated")({
 function RouteComponent() {
 	const [sidebarOpen, setSidebarOpen] = useState(true);
 	const { user } = useAccount();
-	const [isResending, setIsResending] = useState(false);
-
-	const handleResendEmail = async () => {
-		setIsResending(true);
-		try {
-			await resendConfirmEmail();
-			toast.success("Verification email resent! Please check your inbox.");
-		} catch (error) {
-			toast.error("Failed to resend verification email. Please try again.");
-		} finally {
-			setIsResending(false);
-		}
-	};
 
 	return (
 		<SidebarProvider

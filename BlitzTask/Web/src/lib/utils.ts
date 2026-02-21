@@ -1,7 +1,5 @@
-import type { FlashMessage } from "@/types";
 import { type ClassValue, clsx } from "clsx";
 import type { FieldValues, Path, UseFormReturn } from "react-hook-form";
-import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -24,33 +22,4 @@ export function mapErrorsToForm<
 			});
 		});
 	});
-}
-
-export function createFlashMessage(message: FlashMessage) {
-	const serializedItems = localStorage.getItem("flashMessages");
-	const currentMessages = serializedItems
-		? (JSON.parse(serializedItems) as FlashMessage[])
-		: [];
-
-	currentMessages.push(message);
-	localStorage.setItem("flashMessages", JSON.stringify(currentMessages));
-}
-
-export function readFlashMessages() {
-	const serializedItems = localStorage.getItem("flashMessages");
-	if (!serializedItems) return [];
-
-	try {
-		const messages = JSON.parse(serializedItems) as FlashMessage[];
-		localStorage.removeItem("flashMessages");
-
-		messages.forEach((msg) => {
-			toast[msg.type](msg.title, {
-				description: msg.description,
-			});
-		});
-	} catch (error) {
-		console.error("Failed to parse flash messages:", error);
-		localStorage.removeItem("flashMessages");
-	}
 }

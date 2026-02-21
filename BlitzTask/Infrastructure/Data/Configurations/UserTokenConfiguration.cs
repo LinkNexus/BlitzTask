@@ -9,7 +9,7 @@ public class UserTokenConfiguration : IEntityTypeConfiguration<UserToken>
 {
     public void Configure(EntityTypeBuilder<UserToken> builder)
     {
-        builder.HasKey(e => e.Token);
+        builder.HasKey(e => e.Id);
 
         builder
             .HasOne(e => e.User)

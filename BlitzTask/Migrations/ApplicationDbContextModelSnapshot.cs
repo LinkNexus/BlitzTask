@@ -70,11 +70,18 @@ namespace BlitzTask.Migrations
 
             modelBuilder.Entity("BlitzTask.Features.Auth.UserToken", b =>
                 {
-                    b.Property<string>("Token")
-                        .HasColumnType("text");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("TokenType")
                         .HasColumnType("integer");
@@ -82,7 +89,7 @@ namespace BlitzTask.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("Token");
+                    b.HasKey("Id");
 
                     b.HasIndex("UserId");
 

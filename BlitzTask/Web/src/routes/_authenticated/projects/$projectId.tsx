@@ -1,8 +1,28 @@
 import { getProjectOptions } from "@/api/@tanstack/react-query.gen";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
+	beforeLoad: ({ context }) => {
+		if (!context.user?.emailConfirmed) {
+			throw redirect({
+				to: "/login",
+				search: {
+					messages: [
+						{
+							id: crypto.randomUUID(),
+							type: "error",
+							message: {
+								title: "Email not confirmed",
+								description:
+									"You must confirm your email address before accessing this project.",
+							},
+						},
+					],
+				},
+			});
+		}
+	},
 	loader: ({ params, context }) => {
 		return context.queryClient.ensureQueryData(
 			getProjectOptions({

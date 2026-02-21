@@ -74,13 +74,31 @@ function CreateAccountPage() {
 		}
 
 		queryClient.setQueryData(getCurrentUserOptions().queryKey, data);
-		toast.success("Account created!", {
-			description: `Welcome to Blitz-Task, ${data.name}!`,
+
+		await navigate({
+			to: "/dashboard",
+			search: {
+				messages: [
+					{
+						id: crypto.randomUUID(),
+						type: "success",
+						message: {
+							title: "Account created",
+							description: `Your account has been successfully created. Welcome to Blitz-Task, ${data.name}!`,
+						},
+					},
+					{
+						id: crypto.randomUUID(),
+						type: "info",
+						message: {
+							title: "Email Confirmation Required",
+							description:
+								"Please check your email and confirm your address to access all features.",
+						},
+					},
+				],
+			},
 		});
-
-		toast.info("A confirmation email has been sent to your email address.");
-
-		await navigate({ to: "/dashboard" });
 	}
 
 	return (

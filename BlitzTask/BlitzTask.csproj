@@ -20,6 +20,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.3">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageReference Include="RazorLight" Version="2.3.1" />
     <PackageReference Include="Resend" Version="0.2.1" />
@@ -40,4 +44,9 @@
     <Folder Include="Templates/" />
     <Folder Include="Templates/Email/" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <OpenApiDocumentsDirectory>.</OpenApiDocumentsDirectory>
+</PropertyGroup>
+
 </Project>
